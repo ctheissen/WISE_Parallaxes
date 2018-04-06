@@ -317,7 +317,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       ax3.errorbar(np.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2)*d2a,
                    np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2)*d2a,
                    xerr = np.std(t['ra'][slice1][slice2][group][index])  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
-                   yerr = np.std(t['dec'][slice1][slice2][group][index]) / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x')
+                   yerr = np.std(t['dec'][slice1][slice2][group][index]) / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x', ms=20)
 
     i += 1
 
@@ -327,8 +327,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     Ys2.append(np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2))
 
     # Uncertainty weighted position
-    unYs1.append( (1. / np.sqrt(np.sum(1. / t['sigra'][slice1][slice2][group][index]**2)) ) / d2a)
-    unYs2.append( (1. / np.sqrt(np.sum(1. / t['sigdec'][slice1][slice2][group][index]**2)) ) / d2a)
+    unYs1.append( (1. / np.sqrt(np.sum(1./t['sigra'][slice1][slice2][group][index]**2)) ) / d2a)
+    unYs2.append( (1. / np.sqrt(np.sum(1./t['sigdec'][slice1][slice2][group][index]**2)) ) / d2a)
 
     # This is just for plotting
     XsALL.append(t['mjd'][slice1][slice2][group][index].data.compressed())
