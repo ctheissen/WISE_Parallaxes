@@ -201,9 +201,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   ax00.scatter(t3['mjd'], t3['dec']*d2a, c='b', alpha=0.5)
 
   ax0.set_xlabel('MJD')
-  ax0.set_ylabel(r'$\Delta\alpha$ (arcsec)')
+  ax0.set_ylabel('R.A. (arcsec)')
   ax00.set_xlabel('MJD')
-  ax00.set_ylabel(r'$\Delta\delta$ (arcsec)')
+  ax00.set_ylabel('Dec. (arcsec)')
 
   if PLOT:
     fig = plt.figure(2, figsize=(7,6))
