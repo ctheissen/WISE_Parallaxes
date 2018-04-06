@@ -200,6 +200,11 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   ax00.scatter(t2['mjd'], t2['dec']*d2a, c='g', alpha=0.5)
   ax00.scatter(t3['mjd'], t3['dec']*d2a, c='b', alpha=0.5)
 
+  ax0.set_xlabel('MJD')
+  ax0.set_ylabel(r'$\Delta\alpha$ (arcsec)')
+  ax00.set_xlabel('MJD')
+  ax00.set_ylabel(r'$\Delta\delta$ (arcsec)')
+
   if PLOT:
     fig = plt.figure(2, figsize=(7,6))
     ax1 = fig.add_subplot(211)
