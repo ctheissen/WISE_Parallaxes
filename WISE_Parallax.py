@@ -314,8 +314,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       ax3.scatter(t['ra'][slice1][slice2][group][index]*d2a, t['dec'][slice1][slice2][group][index]*d2a, s=2, color=Colors[i], label='%s'%np.average(t['mjd'][slice1][slice2][group][index]))
       ax3.errorbar(np.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2)*d2a,
                    np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2)*d2a,
-                   xerr = np.std(t['ra'][slice1][slice2][group][index])  / np.sqrt(len(t[slice1][slice2][group][index][0])) , 
-                   yerr = np.std(t['dec'][slice1][slice2][group][index]) / np.sqrt(len(t[slice1][slice2][group][index][0])) , c='k', marker='o')
+                   xerr = np.std(t['ra'][slice1][slice2][group][index])  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
+                   yerr = np.std(t['dec'][slice1][slice2][group][index]) / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x')
 
     i += 1
 
@@ -336,6 +336,12 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   raP, decP = Ys1[0], Ys2[0]
 
   if PLOT: 
+
+    ax1.set_xlabel('MJD')
+    ax1.set_ylabel('R.A. (arcsec)')
+    ax2.set_xlabel('MJD')
+    ax2.set_ylabel('Dec. (arcsec)')
+
     ax3.legend(frameon=False)
     ax3.set_title('Here are the measurements we will fit to\n(click anywhere to close)')    
     ax3.set_xlabel('R.A. (arcsec)')
@@ -343,6 +349,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax3.set_xlim(xmax, xmin)
     ax3.set_ylabel('Dec. (arcsec)')
     
+    fig0.savefig('%s/Plots/MJDs0.png'%name, dpi=600, bbox_inches='tight')
     fig.savefig('%s/Plots/MJDs1.png'%name, dpi=600, bbox_inches='tight')
     fig2.savefig('%s/Plots/MJDs2.png'%name, dpi=600, bbox_inches='tight')
     plt.show()
