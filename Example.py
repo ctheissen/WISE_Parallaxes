@@ -10,9 +10,9 @@ radecstr = '10h49m15.57s -53d19m06.1s'
 MeasureParallax(Name=Name, radecstr=radecstr, radius=radius)
 
 """
-# Of you could use 
+# Or you could use the following
 ra0, dec0 = 162.3147060, -53.3183847
-Measure_Parallax(Name=Name, ra0=ra0, dec0=dec0, radius=radius)
+MeasureParallax(Name=Name, ra0=ra0, dec0=dec0, radius=radius)
 """
 
 # Plot the parallax solution

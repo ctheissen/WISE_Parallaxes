@@ -348,7 +348,13 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   # Get the shifts using calibrators (Only use 10 arcsec/arcminutes)
   if NoOffset == False:
-    rashifts, decshifts = GetCalibrators(name, radecstr, Epochs)
+
+    if radecstr != None:
+      rashifts, decshifts = GetCalibrators(name, Epochs, radecstr=radecstr)
+
+    elif ra0 != None and dec0 != None:
+      rashifts, decshifts = GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
+
     print('Shifts (mas):')
     print('RA:', rashifts*d2ma)
     print('DEC:', decshifts*d2ma)

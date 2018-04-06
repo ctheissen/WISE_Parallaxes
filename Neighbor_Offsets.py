@@ -65,7 +65,7 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetCalibrators(name, radecstr, Epochs, radius=10, writeout=True, w1limit=12):
+def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
 
   print('Getting Calibrators within %s arcmin'%radius)
 
@@ -80,8 +80,15 @@ def GetCalibrators(name, radecstr, Epochs, radius=10, writeout=True, w1limit=12)
     ############### Grab the calibration sources
     EngouhCalibrators = True
     while EngouhCalibrators:
-      T = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                                 catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+
+      if radecstr != None:
+        T = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+
+      elif ra0 != None and dec0 != None:
+        T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+
       print('Number of Sources: %s'%len(T))
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
