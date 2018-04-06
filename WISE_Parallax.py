@@ -225,6 +225,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax3.set_ylabel('Dec. (arcsec)')
     ax3.set_title('Select two points to form a bounding box around target\n(plot will close automatically when finished)')
     plt.show()
+    plt.close('all')
 
     # Get the RADEC limits from the click points
     RAmin,  RAmax  = np.min(list(zip(*clickpoints))[0]), np.max(list(zip(*clickpoints))[0])
@@ -256,6 +257,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     plt.legend(frameon=False)
     plt.title('Select the lower and upper bound magnitudes\n(plot will close automatically when finished)')
     plt.show()
+    plt.close('all')
 
     W2min,  W2max  = np.min(list(zip(*clickpoints2))[0]), np.max(list(zip(*clickpoints2))[0])
     if AllowUpperLimits: # Sometimes useful for very faint sources (Y dwarfs)
@@ -353,6 +355,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     fig.savefig('%s/Plots/MJDs1.png'%name, dpi=600, bbox_inches='tight')
     fig2.savefig('%s/Plots/MJDs2.png'%name, dpi=600, bbox_inches='tight')
     plt.show()
+    plt.close('all')
 
   if groupcount < 4: 
     # Only do objects that have multiple observations
@@ -546,10 +549,11 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   print('PMRA:', c_mcmc)
   print('PMDEC:', d_mcmc)
   print('PLX:', e_mcmc)
-  print('dist (pc), [hight, low]: %02.f [%0.2f, %0.2f]'%(1./e_mcmc[0], 1./(e_mcmc[0] - e_mcmc[1]), 1./(e_mcmc[0] + e_mcmc[2])))
+  print('dist (pc), [high, low]: %0.2f [%0.2f, %0.2f]'%(1./e_mcmc[0], 1./(e_mcmc[0] - e_mcmc[1]), 1./(e_mcmc[0] + e_mcmc[2])))
 
   if PLOT: 
     plt.show()
+    plt.close('all')
 
 
 
@@ -649,6 +653,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   plt.minorticks_on()
   plt.savefig('%s/Plots/Pi_radec_solution.png'%name, dpi=600, bbox_inches='tight')
   plt.show()
+  plt.close('all')
 
 
   ###############################
@@ -668,6 +673,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   plt.minorticks_on()
   plt.savefig('%s/Plots/Pi_all_solution.png'%name, dpi=600, bbox_inches='tight')
   plt.show()
+  plt.close('all')
 
   ################################################## Plot residuals without proper motion
 
@@ -707,6 +713,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   plt.savefig('%s/Plots/Pi_RA_DEC_solution.png'%name, dpi=600, bbox_inches='tight')
 
   plt.show()
+  plt.close('all')
 
   ################################################## Plot the parallax circle
 
@@ -727,6 +734,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   plt.savefig('%s/Plots/Pi_circle_solution.png'%name, dpi=600, bbox_inches='tight')
 
   plt.show()
+  plt.close('all')
 
   ##################################################
 
