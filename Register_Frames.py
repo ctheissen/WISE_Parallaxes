@@ -52,40 +52,40 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetCalibrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
+def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
 
-  print('Getting Calibrators within %s arcmin'%radius)
+  print('Getting registration sources within %s arcmin'%radius)
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
-  if os.path.isfile('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch)):
-    print('Calibration Source file for this file already exists. Using current file.')
-    C = Table.read('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch))
+  if os.path.isfile('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch)):
+    print('Registration source file for this epoch already exists. Using current file.')
+    C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
   else:
 
-    ############### Grab the calibration sources
-    EngouhCalibrators = True
-    while EngouhCalibrators:
+    ############### Grab the registration sources
+    EnoughRegisrators = True
+    while EnoughRegisrators:
 
       T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                               catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
 
-      print('Number of Potential Reference Sources: %s'%len(T))
+      print('Number of Potential Registration Sources: %s'%len(T))
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
                          (T['cc_flags'] == b'0000') & (T['ext_flg'] == 0) & 
                          (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) )]
       
-      print('Number of Good Sources: %s'%len(Tnew))
+      print('Number of Good Registration Sources: %s'%len(Tnew))
       if len(Tnew) < 40:
         radius += 1
-        print("Not enough calibration sources. Increasing search radius to %s arcmin."%radius)
+        print("Not enough registration sources. Increasing search radius to %s arcmin."%radius)
 
       else: 
-        EngouhCalibrators = False
+        EnoughRegisrators = False
 
-    ############### Grab the calibration source(s) in each epoch
+    ############### Grab the registration source(s) in each epoch
 
     ## Check how many epochs the source is found in
     # Create the file for the first time
@@ -108,8 +108,8 @@ def GetCalibrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wri
         Ttoss  = Table([np.zeros(len(RAs))+source, W1MAGs, RAs, DECs, MJDs], names=['SOURCE','W1MAG','RA','DEC','MJD'])
         Twrite = vstack([Twrite, Ttoss])
 
-    Twrite.write('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch), overwrite=True)
-    C = Table.read('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch))
+    Twrite.write('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch), overwrite=True)
+    C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
     print('Done')
     #sys.exit()

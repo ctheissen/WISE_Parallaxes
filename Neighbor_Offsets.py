@@ -67,12 +67,12 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
 
-  print('Getting Calibrators within %s arcmin'%radius)
+  print('Getting calibrators within %s arcmin'%radius)
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
   if os.path.isfile('%s/Results/Calib_Sources.csv'%name):
-    print('Calibration Source file already exists. Using current file.')
+    print('Calibration source file already exists. Using current file.')
     C = Table.read('%s/Results/Calib_Sources.csv'%name)
 
   else:
@@ -89,13 +89,13 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
         T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                               catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
 
-      print('Number of Sources: %s'%len(T))
+      print('Number of Potential Calibration Sources: %s'%len(T))
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
                          (T['cc_flags'] == b'0000') & (T['ext_flg'] == 0) & 
                          (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) )]
       
-      print('Number of Good Sources: %s'%len(Tnew))
+      print('Number of Good Calibration Sources: %s'%len(Tnew))
       if len(Tnew) < 40:
         radius += 1
         print("Not enough calibration sources. Increasing search radius to %s arcmin."%radius)

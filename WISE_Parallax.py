@@ -312,7 +312,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       epochs00 = t['mjd'][slice1][slice2][index0]
 
       # Get the shifts
-      rashifts0, decshifts0 = reg.GetCalibrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
+      rashifts0, decshifts0 = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
 
       # Shift the epoch
       shiftedRAs  = t['ra'][slice1][slice2][group]  + rashifts0
