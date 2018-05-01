@@ -13,7 +13,8 @@ import emcee
 from scipy.stats import norm
 import matplotlib.gridspec as gridspec
 import matplotlib
-from Neighbor_Offsets import GetCalibrators
+import Neighbor_Offsets as ne
+import Register_Frames as reg
 
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
@@ -107,7 +108,7 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 
 
 def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, 
-                    PLOT=True, method='mcmc', savechain=True, JPL=True, NoOffset=False, 
+                    PLOT=True, method='mcmc', savechain=True, JPL=True, Calibrate=True, Register=True,
                     AllowUpperLimits=False, sigma=3, **kwargs):
 
   # Make directories for the plots and results
@@ -295,18 +296,39 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   if PLOT:
 
     fig2 = plt.figure(3)
-    cid = fig2.canvas.mpl_connect('button_press_event', onclickclose)
+    cid  = fig2.canvas.mpl_connect('button_press_event', onclickclose)
     ax3  = fig2.add_subplot(111)
   
   for group in Groups:
 
     groupcount += 1
 
-    filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, iters=None)
-    filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, iters=None)
+    if Register != False: ## Register the epoch
+
+      # Get the first position of the epoch
+      index0   = np.argsort(t['mjd'][slice1][slice2][group])
+      ra00     = t['ra'][slice1][slice2][group][index0][0]
+      dec00    = t['dec'][slice1][slice2][group][index0][0]
+      epochs00 = t['mjd'][slice1][slice2][index0]
+
+      # Get the shifts
+      rashifts0, decshifts0 = reg.GetCalibrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
+
+      # Shift the epoch
+      shiftedRAs  = t['ra'][slice1][slice2][group]  + rashifts0
+      shiftedDECs = t['dec'][slice1][slice2][group] + decshifts0
+      #sys.exit()
+
+      filteredRA  = sigma_clip(shiftedRAs,  sigma=sigma, iters=None)
+      filteredDEC = sigma_clip(shiftedDECs, sigma=sigma, iters=None)
+
+    else: # Don't register each subepoch
+
+      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, iters=None)
+      filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, iters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
-    print('Group / Filtered Group: %s / %s'%(len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
+    print('Epoch %s - Group / Filtered Group: %s / %s'%(groupcount, len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
 
     if PLOT:
       ax1.scatter(t['mjd'][slice1][slice2][group][index], t['ra'][slice1][slice2][group][index]*d2a, c='b', marker='x', alpha=0.5)
@@ -362,13 +384,13 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     raise Exception('Not enough epochs available. Only %s epochs available'%groupcount) 
 
   # Get the shifts using calibrators (Only use 10 arcsec/arcminutes)
-  if NoOffset == False:
+  if Calibrate == True:
 
     if radecstr != None:
-      rashifts, decshifts = GetCalibrators(name, Epochs, radecstr=radecstr)
+      rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr)
 
     elif ra0 != None and dec0 != None:
-      rashifts, decshifts = GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
+      rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
 
     print('Shifts (mas):')
     print('RA:', rashifts*d2ma)
@@ -428,7 +450,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   #print(poptD)
   #print(popc)
   #print(np.diag(popc))
-  print('DELTARA\tDELTADE\tPM_RA\tPM_DE\tPLX\n{:.7}\t{:.7}\t{:.5}\t{:.5}\t{:.5}'.format(str(poptD[0]), str(poptD[1]), str(poptD[2]), str(poptD[3]), str(poptD[4])))
+  print('DELTARA\tDELTADE\tPM_RA \tPM_DEC\tPLX\n{:.7}\t{:.7}\t{:.6}\t{:.6}\t{:.5}'.format(str(poptD[0]), str(poptD[1]), str(poptD[2]), str(poptD[3]), str(poptD[4])))
   print('%s pc'%(1/poptD[-1]))
 
   if method == 'leastsq':

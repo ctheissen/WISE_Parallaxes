@@ -31,49 +31,36 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
   t0   = vstack([t00, t3], join_type='inner')
   t = t0
 
-  #### Find the date clusters
-  Groups     = []
-  for bottom, top in Epochs:
-    group  = np.where( (t['mjd'] > bottom) & (t['mjd'] < top) )
+  #### Find the epoch clusters
+  Groups = []
+  for epoch in Epochs:
+    group  = np.where( t['mjd'] == epoch )
     if len(group[0]) != 0:
-      Groups.append(group[0])
+      Groups.append(group[0][0])
 
-  MJDs   = []
-  W1MAGs = []
-  Ys1    = []
-  Ys2    = []
-  unYs1  = []
-  unYs2  = []
+  #print(Epochs)
+  #print(Groups)
+  #print(len(Epochs),len(Groups))
 
-  i = 0
-  
-  for group in Groups:
-
-    filteredRA  = sigma_clip(t['ra'][group],  sigma=3, iters=None)
-    filteredDEC = sigma_clip(t['dec'][group], sigma=3, iters=None)
-
-    index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
-
-    i += 1
-
-    MJDs.append(np.average(t['mjd'][group][index]))
-    W1MAGs.append(np.average(t['w1mpro'][group][index]))
-    Ys1.append(np.average(t['ra'][group][index], weights = 1/(t['sigra'][group][index]/d2a)**2))
-    Ys2.append(np.average(t['dec'][group][index], weights = 1/(t['sigdec'][group][index]/d2a)**2))
-
-  return Ys1, Ys2, MJDs, W1MAGs
+  if len(Groups) >= 0.5*len(Epochs):
+    #print('Good')
+    #print(t['ra'][Groups].data, t['dec'][Groups].data, t['mjd'][Groups].data, t['w1mpro'][Groups].data )
+    return t['ra'][Groups].data, t['dec'][Groups].data, t['mjd'][Groups].data, t['w1mpro'][Groups].data
+  else:
+    return [-9999], [-9999], [-9999], [-9999]
 
 
 
-def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
+
+def GetCalibrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
 
   print('Getting Calibrators within %s arcmin'%radius)
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
-  if os.path.isfile('%s/Results/Calib_Sources.csv'%name):
-    print('Calibration Source file already exists. Using current file.')
-    C = Table.read('%s/Results/Calib_Sources.csv'%name)
+  if os.path.isfile('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch)):
+    print('Calibration Source file for this file already exists. Using current file.')
+    C = Table.read('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch))
 
   else:
 
@@ -81,15 +68,10 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     EngouhCalibrators = True
     while EngouhCalibrators:
 
-      if radecstr != None:
-        T = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
+      T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                               catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
 
-      elif ra0 != None and dec0 != None:
-        T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
-
-      print('Number of Sources: %s'%len(T))
+      print('Number of Potential Reference Sources: %s'%len(T))
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
                          (T['cc_flags'] == b'0000') & (T['ext_flg'] == 0) & 
@@ -99,22 +81,24 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
       if len(Tnew) < 40:
         radius += 1
         print("Not enough calibration sources. Increasing search radius to %s arcmin."%radius)
+
       else: 
         EngouhCalibrators = False
 
     ############### Grab the calibration source(s) in each epoch
 
+    ## Check how many epochs the source is found in
     # Create the file for the first time
     sourcecount = 0
     for source, ra, dec, dist in zip(range(len(Tnew)), Tnew['ra'], Tnew['dec'], Tnew['dist']):
-
       print('Getting source: %s / %s'%(source+1, len(Tnew)))#,MJDs)
 
-      if dist <= 6: 
+      if dist <= 6: # Don't do the target objects
         print('Skipping the target')
-        continue # Don't do the target objects
+        continue 
 
       RAs, DECs, MJDs, W1MAGs = GetPositionsAndEpochs(ra, dec, Epochs)
+      #print(RAs, DECs, MJDs, W1MAGs)
 
       if sourcecount == 0: 
         Twrite = Table([np.zeros(len(RAs))+source, W1MAGs, RAs, DECs, MJDs], names=['SOURCE','W1MAG','RA','DEC','MJD'])
@@ -124,12 +108,14 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
         Ttoss  = Table([np.zeros(len(RAs))+source, W1MAGs, RAs, DECs, MJDs], names=['SOURCE','W1MAG','RA','DEC','MJD'])
         Twrite = vstack([Twrite, Ttoss])
 
-    Twrite.write('%s/Results/Calib_Sources.csv'%name, overwrite=True)
-    C = Table.read('%s/Results/Calib_Sources.csv'%name)
+    Twrite.write('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch), overwrite=True)
+    C = Table.read('%s/Results/Calib_Sources_Epoch%s.csv'%(name, subepoch))
 
     print('Done')
+    #sys.exit()
 
-  # Find Date demarcation points
+  # Find the subepochs
+  """
   GroupDates = []
   DateGrps = np.arange(-1, 30, 2)
   for i in range(len(DateGrps)-1): 
@@ -146,43 +132,50 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
       Epochs.append(C[np.where(  C['MJD'] < GroupDates[g])])
     else: 
       Epochs.append(C[np.where( (C['MJD'] > GroupDates[g-1]) & (C['MJD'] < GroupDates[g]) ) ])
-
+  """
   RA_SHIFTS  = []
   DEC_SHIFTS = []
 
-  # No shift for the first epoch
+  # No shift for the first subepoch
   RA_SHIFTS.append(0.)
   DEC_SHIFTS.append(0.)
 
-  for epoch in np.arange(len(Epochs[1:]))+1:
+  for epoch in Epochs[1:]:
+
+    #print('Epoch:', epoch)
     # Initialize empty lists for all the shifts in the epoch
     RADiffs  = []
     DECDiffs = []
     
     for source in np.unique(C['SOURCE']):
 
-      T01 = Epochs[0]
-      T02 = Epochs[epoch]
+      subcat = C[np.where(C['SOURCE'] == source)]
+
+      T01    = subcat[np.where(subcat['MJD'] == Epochs[0])]
+      T02    = subcat[np.where(subcat['MJD'] == epoch)]
 
       # Check for source in both epochs
-      length1 = len(T01['RA'][ np.where(T01['SOURCE'] == source)])
-      length2 = len(T02['RA'][ np.where(T02['SOURCE'] == source)])
-      if length1 != length2: 
+      length1 = len(T01['RA'])
+      length2 = len(T02['RA'])
+
+      if length1 != length2 or length1 == 0 or length2 == 0: 
         continue
 
       # Future epoch minus first epoch
-      RAdiff  = T02['RA'][ np.where(T02['SOURCE'] == source)].data[0] - T01['RA'][ np.where(T01['SOURCE'] == source)].data[0]
-      DECdiff = T02['DEC'][np.where(T02['SOURCE'] == source)].data[0] - T01['DEC'][np.where(T01['SOURCE'] == source)].data[0]
+      RAdiff  = T02['RA'].data[0] - T01['RA'].data[0]
+      DECdiff = T02['DEC'].data[0] - T01['DEC'].data[0]
+      #print('Diff:', RAdiff*d2ma, DECdiff*d2ma)
       RADiffs.append(RAdiff*d2ma) 
       DECDiffs.append(DECdiff*d2ma)
 
     RADiffs  = np.array(RADiffs)
     DECDiffs = np.array(DECDiffs)
-    step=100
-    bins = range(-500,500+step, step)
+    step=150
+    bins = range(-300,300+step, step)
 
     plt.figure(1001)
-    hist = plt.hist2d(RADiffs, DECDiffs, bins=bins, cmap=plt.cm.Greys, range=((-500,500),(-500,500)))
+    hist = plt.hist2d(RADiffs, DECDiffs, bins=bins, cmap=plt.cm.Greys)
+    #plt.show()
 
     # Find the maximum of the histogram
     counts, xedges, yedges, im1 = hist
@@ -203,8 +196,8 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     plt.close(1001)
 
   if writeout:
-    np.savetxt('%s/Results/ra_shifts.txt'%name, np.array(RA_SHIFTS)/d2ma)
-    np.savetxt('%s/Results/dec_shifts.txt'%name, np.array(DEC_SHIFTS)/d2ma)
+    np.savetxt('%s/Results/ra_shifts_epoch%s.txt'%(name, subepoch), np.array(RA_SHIFTS)/d2ma)
+    np.savetxt('%s/Results/dec_shifts_epoch%s.txt'%(name, subepoch), np.array(DEC_SHIFTS)/d2ma)
 
   return np.array(RA_SHIFTS)/d2ma, np.array(DEC_SHIFTS)/d2ma
 
