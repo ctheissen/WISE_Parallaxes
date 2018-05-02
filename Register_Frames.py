@@ -199,7 +199,7 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     np.savetxt('%s/Results/ra_shifts_epoch%s.txt'%(name, subepoch), np.array(RA_SHIFTS)/d2ma)
     np.savetxt('%s/Results/dec_shifts_epoch%s.txt'%(name, subepoch), np.array(DEC_SHIFTS)/d2ma)
 
-  return np.array(RA_SHIFTS)/d2ma, np.array(DEC_SHIFTS)/d2ma
+  return np.array(RA_SHIFTS)/d2ma, np.array(DEC_SHIFTS)/d2ma, radius
 
 
 

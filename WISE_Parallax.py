@@ -311,8 +311,11 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       dec00    = t['dec'][slice1][slice2][group][index0][0]
       epochs00 = t['mjd'][slice1][slice2][index0]
 
-      # Get the shifts
-      rashifts0, decshifts0 = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
+      # Get the shifts (only need to find the correct search radius for the 1st epoch)
+      if groupcount == 1:
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
+      else: 
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius)
 
       # Shift the epoch
       shiftedRAs  = t['ra'][slice1][slice2][group]  + rashifts0
@@ -387,10 +390,16 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   if Calibrate == True:
 
     if radecstr != None:
-      rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr)
+      if Register == True:
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius)
+      else:
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr)
 
     elif ra0 != None and dec0 != None:
-      rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
+      if Register == True:
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius)
+      else: 
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
 
     print('Shifts (mas):')
     print('RA:', rashifts*d2ma)
@@ -430,6 +439,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   Twrite2.write('%s/Results/All_Epochs.csv'%name, overwrite=True)
 
   print('Epochs:', groupcount)
+  print('Average Pos Uncert (RA; mas):', np.mean(unYs1 * d2ma), np.median(unYs1 * d2ma))
+  print('Average Pos Uncert (Decl; mas):', np.mean(unYs2 * d2ma), np.median(unYs2 * d2ma)) 
   print('Average Pos Uncert (mas):', (np.mean(unYs1 * d2ma) + np.mean(unYs2 * d2ma)) / 2.)
   print('Average Pos Uncert (Combined; mas):', (np.mean(np.sqrt(unYs1**2 + unYs1[0]**2)) * d2ma + np.mean(np.sqrt(unYs2**2 + unYs2[0]**2)) * d2ma) / 2.)
   print('Time Baseline (yr):', (np.max(MJDs) - np.min(MJDs)) * d2y)
