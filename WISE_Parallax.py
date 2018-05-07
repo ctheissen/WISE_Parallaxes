@@ -147,8 +147,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   t00  = vstack([t1, t2], join_type='inner')
   t0   = vstack([t00, t3], join_type='inner')
+  
+  index00   = np.argsort(t0['mjd'])
 
-  t = t0
+  t = t0[index00]
 
   if JPL: # Use the JPL DE430 ephemeris
       from astropy.coordinates import solar_system_ephemeris
@@ -306,10 +308,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     if Register != False: ## Register the epoch
 
       # Get the first position of the epoch
-      index0   = np.argsort(t['mjd'][slice1][slice2][group])
-      ra00     = t['ra'][slice1][slice2][group][index0][0]
-      dec00    = t['dec'][slice1][slice2][group][index0][0]
-      epochs00 = t['mjd'][slice1][slice2][index0]
+      ra00     = t['ra'][slice1][slice2][group][0]
+      dec00    = t['dec'][slice1][slice2][group][0]
+      epochs00 = t['mjd'][slice1][slice2][group]
 
       # Get the shifts (only need to find the correct search radius for the 1st epoch)
       if groupcount == 1:
