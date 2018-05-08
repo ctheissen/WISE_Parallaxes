@@ -108,7 +108,7 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 
 
 def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, 
-                    PLOT=True, method='mcmc', savechain=True, JPL=True, Calibrate=True, Register=True,
+                    PLOT=True, method='mcmc', savechain=True, JPL=True, Register=False, Calibrate=True, 
                     AllowUpperLimits=False, sigma=3, **kwargs):
 
   # Make directories for the plots and results
