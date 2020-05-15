@@ -49,8 +49,8 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
   
   for group in Groups:
 
-    filteredRA  = sigma_clip(t['ra'][group],  sigma=3, iters=None)
-    filteredDEC = sigma_clip(t['dec'][group], sigma=3, iters=None)
+    filteredRA  = sigma_clip(t['ra'][group],  sigma=3, maxiters=None)
+    filteredDEC = sigma_clip(t['dec'][group], sigma=3, maxiters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
 
