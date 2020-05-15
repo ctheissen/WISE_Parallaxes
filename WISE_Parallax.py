@@ -109,7 +109,30 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 
 def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, 
                     PLOT=True, method='mcmc', savechain=True, JPL=True, Register=False, Calibrate=True, 
-                    AllowUpperLimits=False, sigma=3, **kwargs):
+                    AllowUpperLimits=False, sigma=3, removeSingles=False, **kwargs):
+
+
+  '''
+  Required:
+    Name             : name of the object. Used for directory structure
+
+    radecstr         : target coordinates as a string in hmsdms
+    OR
+    ra0, dec0        : target coordinates as decimal degrees
+
+    radius           : search radius for target object in arcsec
+
+  Optional:
+    PLOT             : keyword to set for plotting (default = True)
+    method           : keyword to set for fitting method. Currently only 'mcmc' using the emcee is available
+    savechain        : keyword to set for saving the final MCMC chain (default = True)
+    JPL              : keyword to set to use the JPL ephemeris (default = True)
+    Register         : keyword to set for registering within a single epoch (default = False)
+    Calibrate        : keyword to set for registering each epoch to the first epoch (default = True)
+    AllowUpperLimits : keyword to set for allowing astrometry from upper limit magnitude measurements (default = False) 
+    sigma            : keyword for the sigma clipping value (default = 3)
+    removeSingles    : remove epochs that only have a single frame (observation)
+  '''
 
   # Make directories for the plots and results
   name = Name.replace('$','').replace(' ','').replace('.','')
@@ -278,8 +301,13 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     top    = np.min(t['mjd'][slice1][slice2]) + 365.25/4*DateGrps[i+1]
     group  = np.where( (t['mjd'][slice1][slice2] > bottom) & (t['mjd'][slice1][slice2] < top) )
     if len(group[0]) != 0:
-      Groups.append(group[0])
-      Epochs.append([bottom, top])
+      if removeSingles == True:
+        if len(group[0]) == 1: continue
+        Groups.append(group[0])
+        Epochs.append([bottom, top])
+      else:
+        Groups.append(group[0])
+        Epochs.append([bottom, top])
 
   MJDs  = []
   Ys1   = []
@@ -323,13 +351,13 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       shiftedDECs = t['dec'][slice1][slice2][group] + decshifts0
       #sys.exit()
 
-      filteredRA  = sigma_clip(shiftedRAs,  sigma=sigma, iters=None)
-      filteredDEC = sigma_clip(shiftedDECs, sigma=sigma, iters=None)
+      filteredRA  = sigma_clip(shiftedRAs,  sigma=sigma, maxiters=None)
+      filteredDEC = sigma_clip(shiftedDECs, sigma=sigma, maxiters=None)
 
     else: # Don't register each subepoch
 
-      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, iters=None)
-      filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, iters=None)
+      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, maxiters=None)
+      filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, maxiters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
     print('Epoch %s - Group / Filtered Group: %s / %s'%(groupcount, len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
@@ -419,6 +447,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   MJDs  = np.array(MJDs).flatten()
   unYs1 = np.array(unYs1).flatten()
   unYs2 = np.array(unYs2).flatten()
+  #unYs1 = np.sqrt( np.array(unYs1).flatten()**2 + (5./d2ma)**2 )
+  #unYs2 = np.sqrt( np.array(unYs2).flatten()**2 + (5./d2ma)**2 )
 
   XsALL0  = np.array(XsALL)
 
@@ -440,6 +470,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   Twrite2.write('%s/Results/All_Epochs.csv'%name, overwrite=True)
 
   print('Epochs:', groupcount)
+  print('Positions (RA):', Ys1)
+  print('Positions (Dec):', Ys2)
   print('Average Pos Uncert (RA; mas):', np.mean(unYs1 * d2ma), np.median(unYs1 * d2ma))
   print('Average Pos Uncert (Decl; mas):', np.mean(unYs2 * d2ma), np.median(unYs2 * d2ma)) 
   print('Average Pos Uncert (mas):', (np.mean(unYs1 * d2ma) + np.mean(unYs2 * d2ma)) / 2.)
@@ -523,15 +555,24 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   n_dim, n_walkers, n_steps = 5, 200, 200
   x       = [Ys1*d2a, Ys2*d2a, MJDs]
   yerr    = np.concatenate( [ RA_Uncert, DEC_Uncert ] ).flatten()
-  sampler = emcee.EnsembleSampler(n_walkers, n_dim, ln_probability, args=(x, yerr))
 
   pos = np.array([poptD + 0.2*np.random.randn(n_dim) for i in range(n_walkers)]) # Take initial walkers by best fit values
   pos[:,-1] = abs(pos[:,-1]) # Fix for negative parallax values
 
   RA, DEC = True, True
 
-  sampler.run_mcmc(pos, n_steps)
+
+  # Single core run MCMC
+  sampler = emcee.EnsembleSampler(n_walkers, n_dim, ln_probability, args=(x, yerr))
+  sampler.run_mcmc(pos, n_steps, progress=True)
   samples = sampler.chain
+
+  # Parallelization
+  #from multiprocessing import Pool
+  #os.environ["OMP_NUM_THREADS"] = "1"
+  #with Pool() as pool:
+  #    sampler = emcee.EnsembleSampler(n_walkers, n_dim, ln_probability, args=(x, yerr), pool=pool)
+  #    sampler.run_mcmc(pos, n_steps, progress=True)
 
   # Now plot them
   nwalkers, nsamples, ndim = samples.shape
