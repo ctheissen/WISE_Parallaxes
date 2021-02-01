@@ -65,7 +65,7 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
+def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14):
 
   print('Getting calibrators within %s arcmin'%radius)
 
@@ -91,8 +91,14 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
       print('Number of Potential Calibration Sources: %s'%len(T))
       
+        # Just get the first two cc flags (W1 and W2)
+      ccFlg1 = np.array([e[0] for e in T['cc_flags'].data])
+      ccFlg2 = np.array([e[1] for e in T['cc_flags'].data])
+
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
-                         (T['cc_flags'] == b'0000') & (T['ext_flg'] == 0) & 
+                         #(T['cc_flags'] == b'0000') & 
+                         (ccFlg1 == '0') & (ccFlg2 == '0') & 
+                         (T['ext_flg'] == 0) & 
                          (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) )]
       
       print('Number of Good Calibration Sources: %s'%len(Tnew))

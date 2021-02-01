@@ -4,7 +4,6 @@ from astropy.table import Table, vstack, hstack, join
 import matplotlib.pyplot as plt
 from astropy import units as u
 import astropy.coordinates as coords
-from astropy.stats import sigma_clip
 from astroquery.irsa import Irsa
 Irsa.ROW_LIMIT = -1
 Irsa.TIMEOUT = 60*10 # 10 minutes
@@ -52,7 +51,7 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=12):
+def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14):
 
   print('Getting registration sources within %s arcmin'%radius)
 
@@ -72,10 +71,17 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
                               catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
 
       print('Number of Potential Registration Sources: %s'%len(T))
+
+      # Just get the first two cc flags (W1 and W2)
+      ccFlg1 = np.array([e[0] for e in T['cc_flags'].data])
+      ccFlg2 = np.array([e[1] for e in T['cc_flags'].data])
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
-                         (T['cc_flags'] == b'0000') & (T['ext_flg'] == 0) & 
-                         (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) )]
+                         #(T['cc_flags'] == b'0000') & 
+                         (ccFlg1 == '0') & #(ccFlg2 == '0') & 
+                         (T['ext_flg'] == 0) & 
+                         (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) 
+                         )]
       
       print('Number of Good Registration Sources: %s'%len(Tnew))
       if len(Tnew) < 40:
