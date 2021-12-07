@@ -173,10 +173,12 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
       # Check for source in both epochs
       length1 = len(T01['RA'][ np.where(T01['SOURCE'] == source)])
       length2 = len(T02['RA'][ np.where(T02['SOURCE'] == source)])
-      if length1 != length2: 
+      #print(length1, length2)
+      if length1 != length2 or length1 == 0: 
         continue
 
       # Future epoch minus first epoch
+      #print(T02['RA'][ np.where(T02['SOURCE'] == source)].data)
       RAdiff  = T02['RA'][ np.where(T02['SOURCE'] == source)].data[0] - T01['RA'][ np.where(T01['SOURCE'] == source)].data[0]
       DECdiff = T02['DEC'][np.where(T02['SOURCE'] == source)].data[0] - T01['DEC'][np.where(T01['SOURCE'] == source)].data[0]
       RADiffs.append(RAdiff*d2ma) 
