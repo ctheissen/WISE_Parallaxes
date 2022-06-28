@@ -8,7 +8,7 @@ from astropy.time import Time
 import astropy.coordinates as coords
 from astropy.stats import sigma_clip
 from matplotlib.offsetbox import AnchoredText
-from astroquery.irsa import Irsa
+from astroquery.ipac.irsa import Irsa
 import emcee
 from scipy.stats import norm
 import matplotlib.gridspec as gridspec
@@ -19,8 +19,8 @@ import Register_Frames as reg
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
-Irsa.ROW_LIMIT = -1
-Irsa.TIMEOUT = 60*10 # 10 minutes
+#Irsa.ROW_LIMIT = -1
+#Irsa.TIMEOUT = 60*1 # 10 minutes
 
 plt.rc('xtick', labelsize=8)
 plt.rc('ytick', labelsize=8)

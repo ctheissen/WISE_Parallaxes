@@ -4,9 +4,9 @@ from astropy.table import Table, vstack, hstack, join
 import matplotlib.pyplot as plt
 from astropy import units as u
 import astropy.coordinates as coords
-from astroquery.irsa import Irsa
-Irsa.ROW_LIMIT = -1
-Irsa.TIMEOUT = 60*10 # 10 minutes
+from astroquery.ipac.irsa import Irsa
+#Irsa.ROW_LIMIT = -1
+#Irsa.TIMEOUT = 60*10 # 10 minutes
 
 d2a  = 3600.
 d2ma = 3600000.
