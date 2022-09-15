@@ -19,7 +19,7 @@ import Register_Frames as reg
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
-#Irsa.ROW_LIMIT = -1
+Irsa.ROW_LIMIT = -1
 #Irsa.TIMEOUT = 60*1 # 10 minutes
 
 plt.rc('xtick', labelsize=8)
@@ -236,10 +236,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
     ax1.scatter(t['mjd'], t['ra']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 30, 2): 
+    for j in np.arange(-1, 50, 2): 
       ax1.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
     ax2.scatter(t['mjd'], t['dec']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 30, 2): 
+    for j in np.arange(-1, 50, 2): 
       ax2.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
 
     fig3, ax3 = plt.subplots()
@@ -248,6 +248,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax3.set_xlabel('R.A. (arcsec)')
     xmin,xmax = ax3.get_xlim()
     ax3.set_xlim(xmax, xmin)
+    #ax3.set_xlim(981100, 981080)
+    #ax3.set_ylim(-36620, -36580)
     ax3.set_ylabel('Dec. (arcsec)')
     ax3.set_title('Select two points to form a bounding box around target\n(plot will close automatically when finished)')
     plt.show()
@@ -295,7 +297,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   #### Find the date clusters
   Groups = []
   Epochs = []
-  DateGrps = np.arange(-1, 30, 2)
+  DateGrps = np.arange(-1, 50, 2)
   for i in range(len(DateGrps)-1): 
     bottom = np.min(t['mjd'][slice1][slice2]) + 365.25/4*DateGrps[i]
     top    = np.min(t['mjd'][slice1][slice2]) + 365.25/4*DateGrps[i+1]
@@ -319,7 +321,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   Ys1ALL = []
   Ys2ALL = []
 
-  Colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+  Colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 
+            'C10', 'C11', 'C12', 'C13', 'C14', 'C15', 'C16', 'C17', 'C18', 'C19',
+            'C20', 'C21', 'C22', 'C23', 'C24', 'C25', 'C26', 'C27', 'C28', 'C29',
+            ]
   i = 0
   groupcount = 0
 
@@ -339,6 +344,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       ra00     = t['ra'][slice1][slice2][group][0]
       dec00    = t['dec'][slice1][slice2][group][0]
       epochs00 = t['mjd'][slice1][slice2][group]
+      #print(t['ra'][slice1][slice2][group].data)
+      #print(t['dec'][slice1][slice2][group].data)
+      #print(t['mjd'][slice1][slice2][group].data)
 
       # Get the shifts (only need to find the correct search radius for the 1st epoch)
       if groupcount == 1:
@@ -347,8 +355,12 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
         rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius)
 
       # Shift the epoch
+      #print(rashifts0)
+      #print(decshifts0)
       shiftedRAs  = t['ra'][slice1][slice2][group]  + rashifts0
       shiftedDECs = t['dec'][slice1][slice2][group] + decshifts0
+      #print(shiftedRAs)
+      #print(shiftedDECs)
       #sys.exit()
 
       filteredRA  = sigma_clip(shiftedRAs,  sigma=sigma, maxiters=None)
@@ -370,8 +382,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       ax3.scatter(t['ra'][slice1][slice2][group][index]*d2a, t['dec'][slice1][slice2][group][index]*d2a, s=2, color=Colors[i], label='%s'%np.average(t['mjd'][slice1][slice2][group][index]))
       ax3.errorbar(np.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2)*d2a,
                    np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2)*d2a,
-                   xerr = np.std(t['ra'][slice1][slice2][group][index])  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
-                   yerr = np.std(t['dec'][slice1][slice2][group][index]) / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x', ms=20)
+                   xerr = np.std(t['ra'][slice1][slice2][group][index])*d2a  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
+                   yerr = np.std(t['dec'][slice1][slice2][group][index])*d2a / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x', ms=20)
 
     i += 1
 
@@ -417,6 +429,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   # Get the shifts using calibrators (Only use 10 arcsec/arcminutes)
   if Calibrate == True:
+    #print('EPOCHS:', Epochs, len(Epochs))
+    #print('YS1:', Ys1, len(Ys1))
 
     if radecstr != None:
       if Register == True:
@@ -430,9 +444,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       else: 
         rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
 
-    print('Shifts (mas):')
-    print('RA:', rashifts*d2ma)
-    print('DEC:', decshifts*d2ma)
+    #print('Shifts (mas):')
+    #print('RA:', rashifts*d2ma, len(rashifts))
+    #print('DEC:', decshifts*d2ma, len(decshifts))
 
     Ys1   = np.array(Ys1).flatten() - rashifts
     Ys2   = np.array(Ys2).flatten() - decshifts
@@ -820,7 +834,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 ###########################################################################################################
 
 
-def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False):
+def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResidual=True):
 
   # Get the name for the filepaths
   name = Name.replace('$','').replace(' ','').replace('.','')
@@ -1033,4 +1047,57 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False):
     plt.savefig('%s/Plots/FullSolution.png'%name, dpi=600, bbox_inches='tight')
 
   plt.show()
-  ##################################################
+
+
+  ################################################## Plot residuals without astrometry
+
+  if plotResidual:
+
+    print('Plotting residuals')
+    fig = plt.figure(1, figsize=(7, 6.))
+    cid = fig.canvas.mpl_connect('button_press_event', onclickclose)
+
+    ax1  = fig.add_subplot(211)
+    ax2  = fig.add_subplot(212)
+
+    ####### RA part
+
+    RA, DEC = True, False
+    RAplot = AstrometryFunc([Ys1*d2a, Ys2*d2a, MJDs], *poptEMCEE, RA=RA, DEC=DEC)
+    ax1.errorbar(MJDs, (Ys1-Ys1[0])*d2a*np.cos(Ys2[0]*np.pi/180.) - poptEMCEE[-3]*(MJDs-MJDs[0])*d2y - poptEMCEE[0] - (RAplot - poptEMCEE[-3]*(MJDs-MJDs[0])*d2y - poptEMCEE[0]), 
+                   yerr = RA_Uncert, marker='o',linestyle='None', color='b', ms=ms)
+    #RAplot = AstrometryFunc([Ys1, Ys2, XsALL], *poptEMCEE, RA=RA, DEC=DEC)
+    #ax1.scatter(XsALL, (Ys1ALL - Ys1[0])*d2a*np.cos(Ys2[0]*np.pi/180.) - poptEMCEE[-3]*(XsALL-XsALL[0])*d2y - poptEMCEE[0] - (RAplot - poptEMCEE[-3]*(XsALL-XsALL[0])*d2y - poptEMCEE[0]), 
+    #              c='0.5', alpha=0.3, zorder=-10, s=4, marker='o')
+
+    ####### Dec part
+
+    RA, DEC = False, True
+    DECplot = AstrometryFunc([Ys1*d2a, Ys2*d2a, MJDs], *poptEMCEE, RA=RA, DEC=DEC)
+    ax2.errorbar(MJDs, (Ys2-Ys2[0])*d2a - poptEMCEE[-2]*(MJDs-MJDs[0])*d2y - poptEMCEE[1] - (DECplot - poptEMCEE[-2]*(MJDs-MJDs[0])*d2y - poptEMCEE[1]), 
+                 yerr = DEC_Uncert, marker='^',linestyle='None', ms=ms)
+    #DECplot = AstrometryFunc([RAs, DECs, XsALL], *poptEMCEE, RA=RA, DEC=DEC)
+    #ax2.scatter(XsALL, (Ys2ALL - Ys2[0])*d2a - poptEMCEE[-2]*(XsALL-XsALL[0])*d2y - poptEMCEE[1] - (DECplot - poptEMCEE[-2]*(XsALL-XsALL[0])*d2y - poptEMCEE[1]), 
+    #            c='0.5', alpha=0.3, zorder=-10, s=4, marker='^')
+
+    #######
+
+    ax1.set_ylabel(r'$\Delta\alpha$ (arcsec)')
+    ax1.minorticks_on()
+    ax2.set_ylabel(r'$\Delta\delta$ (arcsec)')
+    ax2.set_xlabel(r'MJD (day)')
+    ax2.minorticks_on()
+
+    ax1.set_xticklabels([])
+
+    plt.suptitle('%s'%Name)
+
+    fig.subplots_adjust(wspace=0.05, hspace=0.1)
+
+    if PDFsave:
+      plt.savefig('%s/Plots/Residuals.pdf'%name, dpi=600, bbox_inches='tight')
+    else:
+      plt.savefig('%s/Plots/Residuals.png'%name, dpi=600, bbox_inches='tight')
+
+    plt.show()
+

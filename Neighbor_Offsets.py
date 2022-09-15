@@ -6,7 +6,7 @@ from astropy import units as u
 import astropy.coordinates as coords
 from astropy.stats import sigma_clip
 from astroquery.ipac.irsa import Irsa
-#Irsa.ROW_LIMIT = -1
+Irsa.ROW_LIMIT = -1
 #Irsa.TIMEOUT = 60*10 # 10 minutes
 
 d2a  = 3600.
@@ -137,7 +137,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
   # Find Date demarcation points
   GroupDates = []
-  DateGrps = np.arange(-1, 30, 2)
+  DateGrps = np.arange(-1, 50, 2)
   for i in range(len(DateGrps)-1): 
     bottom = np.min(C['MJD']) + 365.25/4*DateGrps[i]
     top    = np.min(C['MJD']) + 365.25/4*DateGrps[i+1]
