@@ -56,10 +56,10 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
     i += 1
 
-    MJDs.append(np.average(t['mjd'][group][index]))
-    W1MAGs.append(np.average(t['w1mpro'][group][index]))
-    Ys1.append(np.average(t['ra'][group][index], weights = 1/(t['sigra'][group][index]/d2a)**2))
-    Ys2.append(np.average(t['dec'][group][index], weights = 1/(t['sigdec'][group][index]/d2a)**2))
+    MJDs.append(np.ma.average(t['mjd'][group][index]))
+    W1MAGs.append(np.ma.average(t['w1mpro'][group][index]))
+    Ys1.append(np.ma.average(t['ra'][group][index], weights = 1/(t['sigra'][group][index]/d2a)**2))
+    Ys2.append(np.ma.average(t['dec'][group][index], weights = 1/(t['sigdec'][group][index]/d2a)**2))
 
   return Ys1, Ys2, MJDs, W1MAGs
 
@@ -139,8 +139,8 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
   GroupDates = []
   DateGrps = np.arange(-1, 50, 2)
   for i in range(len(DateGrps)-1): 
-    bottom = np.min(C['MJD']) + 365.25/4*DateGrps[i]
-    top    = np.min(C['MJD']) + 365.25/4*DateGrps[i+1]
+    bottom = np.ma.min(C['MJD']) + 365.25/4*DateGrps[i]
+    top    = np.ma.min(C['MJD']) + 365.25/4*DateGrps[i+1]
     group  = np.where( (C['MJD'] > bottom) & (C['MJD'] < top) )
     if len(group[0]) != 0:
       GroupDates.append(top)
@@ -195,15 +195,15 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     # Find the maximum of the histogram
     counts, xedges, yedges, im1 = hist
 
-    x1 = np.where(counts == np.max(counts))[0][0]
-    y1 = np.where(counts == np.max(counts))[1][0]
+    x1 = np.where(counts == np.ma.max(counts))[0][0]
+    y1 = np.where(counts == np.ma.max(counts))[1][0]
 
     SiftedRAdiff  = RADiffs[np.where(  (RADiffs >=  xedges[x1]) & (RADiffs  <= xedges[x1+1]) &
                                        (DECDiffs >= yedges[y1]) & (DECDiffs <= yedges[y1+1]) )]
     SiftedDECdiff = DECDiffs[np.where( (RADiffs >=  xedges[x1]) & (RADiffs  <= xedges[x1+1])&
                                        (DECDiffs >= yedges[y1]) & (DECDiffs <= yedges[y1+1]) )]
-    SHIFT_RA  = np.median(SiftedRAdiff)
-    SHIFT_DEC = np.median(SiftedDECdiff)
+    SHIFT_RA  = np.ma.median(SiftedRAdiff)
+    SHIFT_DEC = np.ma.median(SiftedDECdiff)
 
     RA_SHIFTS.append(SHIFT_RA)
     DEC_SHIFTS.append(SHIFT_DEC)

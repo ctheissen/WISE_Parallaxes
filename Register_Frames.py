@@ -186,15 +186,15 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     # Find the maximum of the histogram
     counts, xedges, yedges, im1 = hist
 
-    x1 = np.where(counts == np.max(counts))[0][0]
-    y1 = np.where(counts == np.max(counts))[1][0]
+    x1 = np.where(counts == np.ma.max(counts))[0][0]
+    y1 = np.where(counts == np.ma.max(counts))[1][0]
 
     SiftedRAdiff  = RADiffs[np.where(  (RADiffs >=  xedges[x1]) & (RADiffs  <= xedges[x1+1]) &
                                        (DECDiffs >= yedges[y1]) & (DECDiffs <= yedges[y1+1]) )]
     SiftedDECdiff = DECDiffs[np.where( (RADiffs >=  xedges[x1]) & (RADiffs  <= xedges[x1+1])&
                                        (DECDiffs >= yedges[y1]) & (DECDiffs <= yedges[y1+1]) )]
-    SHIFT_RA  = np.median(SiftedRAdiff)
-    SHIFT_DEC = np.median(SiftedDECdiff)
+    SHIFT_RA  = np.ma.median(SiftedRAdiff)
+    SHIFT_DEC = np.ma.median(SiftedDECdiff)
 
     RA_SHIFTS.append(SHIFT_RA)
     DEC_SHIFTS.append(SHIFT_DEC)

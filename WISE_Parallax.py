@@ -15,6 +15,8 @@ import matplotlib.gridspec as gridspec
 import matplotlib
 import Neighbor_Offsets as ne
 import Register_Frames as reg
+import warnings
+warnings.simplefilter('ignore')
 
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
@@ -337,7 +339,6 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   for group in Groups:
 
     groupcount += 1
-
     if Register != False: ## Register the epoch
 
       # Get the first position of the epoch
@@ -363,12 +364,23 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       #print(shiftedDECs)
       #sys.exit()
 
-      filteredRA  = sigma_clip(shiftedRAs,  sigma=sigma, maxiters=None)
-      filteredDEC = sigma_clip(shiftedDECs, sigma=sigma, maxiters=None)
+      filteredRA  = sigma_clip(shiftedRAs.data,  sigma=sigma, maxiters=None)
+      filteredDEC = sigma_clip(shiftedDECs.data, sigma=sigma, maxiters=None)
+      '''
+      print(shiftedRAs.data)
+      print(filteredRA)
+      plt.figure()
+      print(filteredRA.compressed(), filteredDEC.compressed())
+      plt.scatter(shiftedRAs.data, shiftedDECs.data, marker='o', s=30)
+      plt.scatter(filteredRA.compressed(), filteredDEC.compressed(), marker='x', s=20)
+      plt.errorbar(np.ma.median(shiftedRAs.data), np.ma.median(shiftedDECs.data), 
+                   xerr=np.ma.std(shiftedRAs.data), yerr=np.ma.std(shiftedDECs.data))
+      plt.show()
+      '''
 
     else: # Don't register each subepoch
 
-      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, maxiters=None)
+      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, maxiters=None,)
       filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, maxiters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
@@ -378,23 +390,23 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       ax1.scatter(t['mjd'][slice1][slice2][group][index], t['ra'][slice1][slice2][group][index]*d2a, c='b', marker='x', alpha=0.5)
       ax2.scatter(t['mjd'][slice1][slice2][group][index], t['dec'][slice1][slice2][group][index]*d2a, c='b', marker='x', alpha=0.5)
 
-      ax3.scatter(t['ra'][slice1][slice2][group]*d2a,        t['dec'][slice1][slice2][group]*d2a, alpha=0.3, color=Colors[i], label='%s'%np.average(t['mjd'][slice1][slice2][group][index]))
-      ax3.scatter(t['ra'][slice1][slice2][group][index]*d2a, t['dec'][slice1][slice2][group][index]*d2a, s=2, color=Colors[i], label='%s'%np.average(t['mjd'][slice1][slice2][group][index]))
-      ax3.errorbar(np.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2)*d2a,
-                   np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2)*d2a,
-                   xerr = np.std(t['ra'][slice1][slice2][group][index])*d2a  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
-                   yerr = np.std(t['dec'][slice1][slice2][group][index])*d2a / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x', ms=20)
-
+      ax3.scatter(t['ra'][slice1][slice2][group]*d2a,        t['dec'][slice1][slice2][group]*d2a, alpha=0.3, color=Colors[i], label='%s'%np.ma.average(t['mjd'][slice1][slice2][group][index]))
+      ax3.scatter(t['ra'][slice1][slice2][group][index]*d2a, t['dec'][slice1][slice2][group][index]*d2a, s=2, color=Colors[i], label='%s'%np.ma.average(t['mjd'][slice1][slice2][group][index]))
+      ax3.errorbar(np.ma.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2)*d2a,
+                   np.ma.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2)*d2a,
+                   xerr = np.ma.std(t['ra'][slice1][slice2][group][index])*d2a  / np.sqrt(len(t[slice1][slice2][group][index][0])), 
+                   yerr = np.ma.std(t['dec'][slice1][slice2][group][index])*d2a / np.sqrt(len(t[slice1][slice2][group][index][0])), c=Colors[i], marker='x', ms=20)
+    
     i += 1
 
-    MJDs.append(np.average(t['mjd'][slice1][slice2][group][index]))
+    MJDs.append(np.ma.average(t['mjd'][slice1][slice2][group][index]))
 
-    Ys1.append(np.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2))
-    Ys2.append(np.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2))
+    Ys1.append(np.ma.average(t['ra'][slice1][slice2][group][index],  weights = 1./(t['sigra'][slice1][slice2][group][index]/d2a)**2))
+    Ys2.append(np.ma.average(t['dec'][slice1][slice2][group][index], weights = 1./(t['sigdec'][slice1][slice2][group][index]/d2a)**2))
 
     # Uncertainty weighted position
-    unYs1.append( (1. / np.sqrt(np.sum(1./t['sigra'][slice1][slice2][group][index]**2)) ) / d2a)
-    unYs2.append( (1. / np.sqrt(np.sum(1./t['sigdec'][slice1][slice2][group][index]**2)) ) / d2a)
+    unYs1.append( (1. / np.sqrt(np.ma.sum(1./t['sigra'][slice1][slice2][group][index]**2)) ) / d2a)
+    unYs2.append( (1. / np.sqrt(np.ma.sum(1./t['sigdec'][slice1][slice2][group][index]**2)) ) / d2a)
 
     # This is just for plotting
     XsALL.append(t['mjd'][slice1][slice2][group][index].data.compressed())
@@ -486,11 +498,11 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   print('Epochs:', groupcount)
   print('Positions (RA):', Ys1)
   print('Positions (Dec):', Ys2)
-  print('Average Pos Uncert (RA; mas):', np.mean(unYs1 * d2ma), np.median(unYs1 * d2ma))
-  print('Average Pos Uncert (Decl; mas):', np.mean(unYs2 * d2ma), np.median(unYs2 * d2ma)) 
-  print('Average Pos Uncert (mas):', (np.mean(unYs1 * d2ma) + np.mean(unYs2 * d2ma)) / 2.)
-  print('Average Pos Uncert (Combined; mas):', (np.mean(np.sqrt(unYs1**2 + unYs1[0]**2)) * d2ma + np.mean(np.sqrt(unYs2**2 + unYs2[0]**2)) * d2ma) / 2.)
-  print('Time Baseline (yr):', (np.max(MJDs) - np.min(MJDs)) * d2y)
+  print('Average Pos Uncert (RA; mas):', np.ma.mean(unYs1 * d2ma), np.ma.median(unYs1 * d2ma))
+  print('Average Pos Uncert (Decl; mas):', np.ma.mean(unYs2 * d2ma), np.ma.median(unYs2 * d2ma)) 
+  print('Average Pos Uncert (mas):', (np.ma.mean(unYs1 * d2ma) + np.ma.mean(unYs2 * d2ma)) / 2.)
+  print('Average Pos Uncert (Combined; mas):', (np.ma.mean(np.sqrt(unYs1**2 + unYs1[0]**2)) * d2ma + np.ma.mean(np.sqrt(unYs2**2 + unYs2[0]**2)) * d2ma) / 2.)
+  print('Time Baseline (yr):', (np.ma.max(MJDs) - np.ma.min(MJDs)) * d2y)
 
   # Uncertainty arrays in arcsec
   RA_Uncert  = np.sqrt(unYs1**2 + unYs1[0]**2)*d2a
