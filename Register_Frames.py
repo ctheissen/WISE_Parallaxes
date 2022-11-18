@@ -14,21 +14,21 @@ d2y  = 1/365.25
 
 ##################
 
-def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
+def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
   t1 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                        catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                        catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   if len(t2) == 0:
     t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                          catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   t3 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
 
   t00  = vstack([t1, t2], join_type='inner')
   t0   = vstack([t00, t3], join_type='inner')
-  t = t0
+  t    = t0
 
   #### Find the epoch clusters
   Groups = []
@@ -51,7 +51,7 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14):
+def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False):
 
   print('Getting registration sources within %s arcmin'%radius)
 
@@ -64,11 +64,11 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
   else:
 
     ############### Grab the registration sources
-    EnoughRegisrators = True
-    while EnoughRegisrators:
+    EnoughRegistrators = True
+    while EnoughRegistrators:
 
       T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
 
       print('Number of Potential Registration Sources: %s'%len(T))
 
@@ -78,7 +78,7 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
       
       Tnew = T[np.where( (T['w1sat'] == 0) & (T['w2sat'] == 0) & #(T['qual_frame'] != 0) & 
                          #(T['cc_flags'] == b'0000') & 
-                         (ccFlg1 == '0') & #(ccFlg2 == '0') & 
+                         (ccFlg1 == '0') & (ccFlg2 == '0') & 
                          (T['ext_flg'] == 0) & 
                          (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) 
                          )]
@@ -87,9 +87,8 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
       if len(Tnew) < 40:
         radius += 1
         print("Not enough registration sources. Increasing search radius to %s arcmin."%radius)
-
       else: 
-        EnoughRegisrators = False
+        EnoughRegistrators = False
 
     ############### Grab the registration source(s) in each epoch
 
@@ -97,14 +96,14 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     # Create the file for the first time
     sourcecount = 0
     for source, ra, dec, dist in zip(range(len(Tnew)), Tnew['ra'], Tnew['dec'], Tnew['dist']):
+      
       print('Getting source: %s / %s'%(source+1, len(Tnew)))#,MJDs)
 
       if dist <= 6: # Don't do the target objects
         print('Skipping the target')
         continue 
 
-      RAs, DECs, MJDs, W1MAGs = GetPositionsAndEpochs(ra, dec, Epochs)
-      #print(RAs, DECs, MJDs, W1MAGs)
+      RAs, DECs, MJDs, W1MAGs = GetPositionsAndEpochs(ra, dec, Epochs, cache=cache)
 
       if sourcecount == 0: 
         Twrite = Table([np.zeros(len(RAs))+source, W1MAGs, RAs, DECs, MJDs], names=['SOURCE','W1MAG','RA','DEC','MJD'])
@@ -118,27 +117,8 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
     print('Done')
-    #sys.exit()
-
-  # Find the subepochs
-  """
-  GroupDates = []
-  DateGrps = np.arange(-1, 30, 2)
-  for i in range(len(DateGrps)-1): 
-    bottom = np.min(C['MJD']) + 365.25/4*DateGrps[i]
-    top    = np.min(C['MJD']) + 365.25/4*DateGrps[i+1]
-    group  = np.where( (C['MJD'] > bottom) & (C['MJD'] < top) )
-    if len(group[0]) != 0:
-      GroupDates.append(top)
 
 
-  Epochs = []
-  for g in range(len(GroupDates)):
-    if g == 0:
-      Epochs.append(C[np.where(  C['MJD'] < GroupDates[g])])
-    else: 
-      Epochs.append(C[np.where( (C['MJD'] > GroupDates[g-1]) & (C['MJD'] < GroupDates[g]) ) ])
-  """
   RA_SHIFTS  = []
   DEC_SHIFTS = []
 

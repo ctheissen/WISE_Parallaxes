@@ -15,28 +15,29 @@ d2y  = 1/365.25
 
 ##################
 
-def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
+def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
   t1 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                        catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                        catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   if len(t2) == 0:
     t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                          catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   t3 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
 
   t00  = vstack([t1, t2], join_type='inner')
   t0   = vstack([t00, t3], join_type='inner')
-  t = t0
+  t    = t0
 
   #### Find the date clusters
-  Groups     = []
+  Groups = []
   for bottom, top in Epochs:
     group  = np.where( (t['mjd'] > bottom) & (t['mjd'] < top) )
     if len(group[0]) != 0:
       Groups.append(group[0])
+    else: print('Skipping Epoch')
 
   MJDs   = []
   W1MAGs = []
@@ -65,7 +66,7 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6):
 
 
 
-def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14):
+def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False):
 
   print('Getting calibrators within %s arcmin'%radius)
 
@@ -83,15 +84,15 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
       if radecstr != None:
         T = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
 
       elif ra0 != None and dec0 != None:
         T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
 
       print('Number of Potential Calibration Sources: %s'%len(T))
       
-        # Just get the first two cc flags (W1 and W2)
+      # Just get the first two cc flags (W1 and W2)
       ccFlg1 = np.array([e[0] for e in T['cc_flags'].data])
       ccFlg2 = np.array([e[1] for e in T['cc_flags'].data])
 
@@ -99,7 +100,8 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
                          #(T['cc_flags'] == b'0000') & 
                          (ccFlg1 == '0') & (ccFlg2 == '0') & 
                          (T['ext_flg'] == 0) & 
-                         (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) )]
+                         (T['w1mpro'] <= w1limit) & (T['w1snr'] >= 10) 
+                         )]
       
       print('Number of Good Calibration Sources: %s'%len(Tnew))
       if len(Tnew) < 40:
@@ -110,17 +112,18 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
     ############### Grab the calibration source(s) in each epoch
 
+    ## Check how many epochs the source is found in
     # Create the file for the first time
     sourcecount = 0
     for source, ra, dec, dist in zip(range(len(Tnew)), Tnew['ra'], Tnew['dec'], Tnew['dist']):
 
       print('Getting source: %s / %s'%(source+1, len(Tnew)))#,MJDs)
 
-      if dist <= 6: 
+      if dist <= 6: # Don't do the target object
         print('Skipping the target')
-        continue # Don't do the target objects
+        continue 
 
-      RAs, DECs, MJDs, W1MAGs = GetPositionsAndEpochs(ra, dec, Epochs)
+      RAs, DECs, MJDs, W1MAGs = GetPositionsAndEpochs(ra, dec, Epochs, cache=cache)
 
       if sourcecount == 0: 
         Twrite = Table([np.zeros(len(RAs))+source, W1MAGs, RAs, DECs, MJDs], names=['SOURCE','W1MAG','RA','DEC','MJD'])
@@ -137,10 +140,10 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
   # Find Date demarcation points
   GroupDates = []
-  DateGrps = np.arange(-1, 50, 2)
+  DateGrps = np.arange(-1, 80, 2)
   for i in range(len(DateGrps)-1): 
-    bottom = np.ma.min(C['MJD']) + 365.25/4*DateGrps[i]
-    top    = np.ma.min(C['MJD']) + 365.25/4*DateGrps[i+1]
+    bottom = np.min(C['MJD']) + 365.25/4*DateGrps[i]
+    top    = np.min(C['MJD']) + 365.25/4*DateGrps[i+1]
     group  = np.where( (C['MJD'] > bottom) & (C['MJD'] < top) )
     if len(group[0]) != 0:
       GroupDates.append(top)
@@ -191,6 +194,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
     plt.figure(1001)
     hist = plt.hist2d(RADiffs, DECDiffs, bins=bins, cmap=plt.cm.Greys, range=((-500,500),(-500,500)))
+    #plt.show()
 
     # Find the maximum of the histogram
     counts, xedges, yedges, im1 = hist
@@ -207,7 +211,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
     RA_SHIFTS.append(SHIFT_RA)
     DEC_SHIFTS.append(SHIFT_DEC)
-
+    
     plt.close(1001)
 
   if writeout:

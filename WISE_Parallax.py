@@ -18,6 +18,7 @@ import Register_Frames as reg
 import warnings
 warnings.simplefilter('ignore')
 
+
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
@@ -109,7 +110,7 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 ###########################################################################################################
 
 
-def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, 
+def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, cache=False,
                     PLOT=True, method='mcmc', savechain=True, JPL=True, Register=False, Calibrate=True, 
                     AllowUpperLimits=False, sigma=3, removeSingles=False, **kwargs):
 
@@ -147,26 +148,26 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   if radecstr != None:
 
     t1 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     t3 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
 
   elif ra0 != None and dec0 != None:
 
     t1 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
     t3 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec)
+                           catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
   else:
     raise ValueError("Need to supply either radecstr or ra0 and dec0") # Need some coords
 
@@ -199,9 +200,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     # Parallax factors   
     Fac1 = (bary.x * np.sin(ras/d2a*np.pi/180.) - bary.y * np.cos(ras/d2a *np.pi/180.) ) 
-    Fac2 = bary.x * np.cos(ras/d2a *np.pi/180.) * np.sin(decs/d2a *np.pi/180.) + \
-           bary.y * np.sin(ras/d2a *np.pi/180.) * np.sin(decs/d2a *np.pi/180.) - \
-           bary.z * np.cos(decs/d2a *np.pi/180.)
+    Fac2 =  bary.x * np.cos(ras/d2a *np.pi/180.) * np.sin(decs/d2a *np.pi/180.) + \
+            bary.y * np.sin(ras/d2a *np.pi/180.) * np.sin(decs/d2a *np.pi/180.) - \
+            bary.z * np.cos(decs/d2a *np.pi/180.)
 
     RAsend  = Delta1 + PMra  * years + pi * Fac1.value
     DECsend = Delta2 + PMdec * years + pi * Fac2.value
@@ -238,10 +239,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
     ax1.scatter(t['mjd'], t['ra']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 50, 2): 
+    for j in np.arange(-1, 80, 2): 
       ax1.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
     ax2.scatter(t['mjd'], t['dec']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 50, 2): 
+    for j in np.arange(-1, 80, 2): 
       ax2.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
 
     fig3, ax3 = plt.subplots()
@@ -284,7 +285,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     plt.plot([x[1000],x[1000]],[0,0], c='0.5', ls=':', lw=0.75, alpha=0.5, label='Individual measurements')
     plt.xlabel(r'$W2$')
     plt.ylabel('PDF')
-    plt.legend(frameon=False)
+    plt.legend(frameon=False, ncol=2)
     plt.title('Select the lower and upper bound magnitudes\n(plot will close automatically when finished)')
     plt.show()
     plt.close('all')
@@ -297,37 +298,43 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       
 
   #### Find the date clusters
-  Groups = []
-  Epochs = []
-  DateGrps = np.arange(-1, 50, 2)
+  Groups   = []
+  Epochs   = []
+  DateGrps = np.arange(-1, 80, 2) # Sometimes this needs to be changed depending on how long the mission goes
+
   for i in range(len(DateGrps)-1): 
+    #print(DateGrps[i], DateGrps[i+1])
     bottom = np.min(t['mjd'][slice1][slice2]) + 365.25/4*DateGrps[i]
     top    = np.min(t['mjd'][slice1][slice2]) + 365.25/4*DateGrps[i+1]
     group  = np.where( (t['mjd'][slice1][slice2] > bottom) & (t['mjd'][slice1][slice2] < top) )
+
     if len(group[0]) != 0:
       if removeSingles == True:
-        if len(group[0]) == 1: continue
-        Groups.append(group[0])
-        Epochs.append([bottom, top])
+        if len(group[0]) == 1: 
+          continue
+        else: 
+          Groups.append(group[0])
+          Epochs.append([bottom, top])
       else:
         Groups.append(group[0])
         Epochs.append([bottom, top])
 
-  MJDs  = []
-  Ys1   = []
-  Ys2   = []
-  unYs1 = []
-  unYs2 = []
+  MJDs   = []
+  Ys1    = []
+  Ys2    = []
+  unYs1  = []
+  unYs2  = []
 
   XsALL  = []
   Ys1ALL = []
   Ys2ALL = []
 
-  Colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 
+  Colors = ['C0',  'C1',  'C2',  'C3',  'C4',  'C5',  'C6',  'C7',  'C8',  'C9', 
             'C10', 'C11', 'C12', 'C13', 'C14', 'C15', 'C16', 'C17', 'C18', 'C19',
             'C20', 'C21', 'C22', 'C23', 'C24', 'C25', 'C26', 'C27', 'C28', 'C29',
+            'C30', 'C31', 'C32', 'C33', 'C34', 'C35', 'C36', 'C37', 'C38', 'C39',
             ]
-  i = 0
+  i          = 0
   groupcount = 0
 
   if PLOT:
@@ -351,9 +358,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
       # Get the shifts (only need to find the correct search radius for the 1st epoch)
       if groupcount == 1:
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, cache=cache)
       else: 
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius, cache=cache)
 
       # Shift the epoch
       #print(rashifts0)
@@ -384,7 +391,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
       filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, maxiters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
-    print('Epoch %s - Group / Filtered Group: %s / %s'%(groupcount, len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
+    print('Epoch %s/%s - Group / Filtered Group: %s/%s'%(groupcount, len(Groups), len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
 
     if PLOT:
       ax1.scatter(t['mjd'][slice1][slice2][group][index], t['ra'][slice1][slice2][group][index]*d2a, c='b', marker='x', alpha=0.5)
@@ -446,27 +453,27 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     if radecstr != None:
       if Register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius, cache=cache)
       else:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, cache=cache)
 
     elif ra0 != None and dec0 != None:
       if Register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, cache=cache)
       else: 
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, cache=cache)
 
     #print('Shifts (mas):')
     #print('RA:', rashifts*d2ma, len(rashifts))
     #print('DEC:', decshifts*d2ma, len(decshifts))
 
-    Ys1   = np.array(Ys1).flatten() - rashifts
-    Ys2   = np.array(Ys2).flatten() - decshifts
+    Ys1     = np.array(Ys1).flatten() - rashifts
+    Ys2     = np.array(Ys2).flatten() - decshifts
     Ys1ALL0 = np.array(Ys1ALL) - rashifts
     Ys2ALL0 = np.array(Ys2ALL) - decshifts
   else:
-    Ys1   = np.array(Ys1).flatten()
-    Ys2   = np.array(Ys2).flatten()
+    Ys1     = np.array(Ys1).flatten()
+    Ys2     = np.array(Ys2).flatten()
     Ys1ALL0 = np.array(Ys1ALL)
     Ys2ALL0 = np.array(Ys2ALL)
 
@@ -778,7 +785,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   ################################################## Plot residuals without proper motion
 
-  fig = plt.figure(3, figsize=(8,6))
+  fig = plt.figure(3, figsize=(10,10))
   cid = fig.canvas.mpl_connect('button_press_event', onclickclose)
   ax1 = fig.add_subplot(211)
   ax2 = fig.add_subplot(212)
