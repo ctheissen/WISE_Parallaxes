@@ -145,34 +145,45 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     os.makedirs('%s/Results'%name)
 
   # Get the object
+
+  selcols = "ra,dec,sigra,sigdec,w1mpro,w2mpro,w1sigmpro,w2sigmpro,mjd,qual_frame"
+  
   if radecstr != None:
 
     t1 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
     t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                             selcols=selcols)
     t3 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
 
   elif ra0 != None and dec0 != None:
 
     t1 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
     t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                             catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                             selcols=selcols)
     t3 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                           catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
   else:
     raise ValueError("Need to supply either radecstr or ra0 and dec0") # Need some coords
 
-  t00  = vstack([t1, t2], join_type='inner')
-  t0   = vstack([t00, t3], join_type='inner')
+  t00  = vstack([t1[np.where(t1['qual_frame']!=0)], t2[np.where(t2['qual_frame']!=0)]], join_type='inner')
+  t0   = vstack([t00, t3[np.where(t3['qual_frame']!=0)]], join_type='inner')
   
   index00   = np.argsort(t0['mjd'])
 
@@ -1089,6 +1100,10 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
     #ax1.scatter(XsALL, (Ys1ALL - Ys1[0])*d2a*np.cos(Ys2[0]*np.pi/180.) - poptEMCEE[-3]*(XsALL-XsALL[0])*d2y - poptEMCEE[0] - (RAplot - poptEMCEE[-3]*(XsALL-XsALL[0])*d2y - poptEMCEE[0]), 
     #              c='0.5', alpha=0.3, zorder=-10, s=4, marker='o')
 
+    # For saving to a file
+    X_save    = (Ys1-Ys1[0])*d2a*np.cos(Ys2[0]*np.pi/180.) - poptEMCEE[-3]*(MJDs-MJDs[0])*d2y - poptEMCEE[0] - (RAplot - poptEMCEE[-3]*(MJDs-MJDs[0])*d2y - poptEMCEE[0])
+    Xun_save  = RA_Uncert
+
     ####### Dec part
 
     RA, DEC = False, True
@@ -1099,7 +1114,14 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
     #ax2.scatter(XsALL, (Ys2ALL - Ys2[0])*d2a - poptEMCEE[-2]*(XsALL-XsALL[0])*d2y - poptEMCEE[1] - (DECplot - poptEMCEE[-2]*(XsALL-XsALL[0])*d2y - poptEMCEE[1]), 
     #            c='0.5', alpha=0.3, zorder=-10, s=4, marker='^')
 
+    # For saving to a file
+    Y_save    = (Ys2-Ys2[0])*d2a - poptEMCEE[-2]*(MJDs-MJDs[0])*d2y - poptEMCEE[1] - (DECplot - poptEMCEE[-2]*(MJDs-MJDs[0])*d2y - poptEMCEE[1])
+    Yun_save  = DEC_Uncert
+
     #######
+
+    tresiduals = Table([MJDs, X_save, Xun_save, Y_save, Yun_save], names=['MJD','RA','eRA','DEC','eDEC'])
+    tresiduals.write('%s/Results/Residuals.csv'%name)
 
     ax1.set_ylabel(r'$\Delta\alpha$ (arcsec)')
     ax1.minorticks_on()

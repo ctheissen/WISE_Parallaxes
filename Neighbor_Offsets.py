@@ -17,18 +17,24 @@ d2y  = 1/365.25
 
 def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
+  selcols = "ra,dec,sigra,sigdec,w1mpro,w2mpro,w1sigmpro,w2sigmpro,mjd,qual_frame"
+  
   t1 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                        catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                         catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                         selcols=selcols)
   t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                         catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                         selcols=selcols)
   if len(t2) == 0:
     t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                           catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                           selcols=selcols)
   t3 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
-                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache)
+                         catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
+                         selcols=selcols)
 
-  t00  = vstack([t1, t2], join_type='inner')
-  t0   = vstack([t00, t3], join_type='inner')
+  t00  = vstack([t1[np.where(t1['qual_frame']!=0)], t2[np.where(t2['qual_frame']!=0)]], join_type='inner')
+  t0   = vstack([t00, t3[np.where(t3['qual_frame']!=0)]], join_type='inner')
   t    = t0
 
   #### Find the date clusters
@@ -117,7 +123,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     sourcecount = 0
     for source, ra, dec, dist in zip(range(len(Tnew)), Tnew['ra'], Tnew['dec'], Tnew['dist']):
 
-      print('Getting source: %s / %s'%(source+1, len(Tnew)))#,MJDs)
+      print('Getting source: %s / %s'%(source+1, len(Tnew)), end='\r')#,MJDs)
 
       if dist <= 6: # Don't do the target object
         print('Skipping the target')
