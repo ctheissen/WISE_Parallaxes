@@ -112,7 +112,8 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 
 def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, cache=False,
                     PLOT=True, method='mcmc', savechain=True, JPL=True, Register=False, Calibrate=True, 
-                    AllowUpperLimits=False, sigma=3, removeSingles=False, **kwargs):
+                    AllowUpperLimits=False, sigma=3, removeSingles=False, removeEpochs=[], overwriteReg=False, 
+                    **kwargs):
 
 
   '''
@@ -135,6 +136,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     AllowUpperLimits : keyword to set for allowing astrometry from upper limit magnitude measurements (default = False) 
     sigma            : keyword for the sigma clipping value (default = 3)
     removeSingles    : remove epochs that only have a single frame (observation)
+    removeEpochs     : list of epochs to remove from the fit (first epoch starts at 1)
   '''
 
   # Make directories for the plots and results
@@ -354,9 +356,15 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     cid  = fig2.canvas.mpl_connect('button_press_event', onclickclose)
     ax3  = fig2.add_subplot(111)
   
+  # Remove requested epochs
+  for epochRemove in sorted(removeEpochs, reverse=True): 
+    newGroups = Groups.pop(epochRemove-1)
+    newEpochs = Epochs.pop(epochRemove-1)
+  
   for group in Groups:
 
     groupcount += 1
+
     if Register != False: ## Register the epoch
 
       # Get the first position of the epoch
@@ -464,15 +472,15 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     if radecstr != None:
       if Register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, overwriteReg=overwriteReg, cache=cache)
 
     elif ra0 != None and dec0 != None:
       if Register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else: 
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, overwriteReg=overwriteReg, cache=cache)
 
     #print('Shifts (mas):')
     #print('RA:', rashifts*d2ma, len(rashifts))
@@ -1072,9 +1080,9 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
   fig.subplots_adjust(wspace=0.05, hspace=0.1)
 
   if PDFsave:
-    plt.savefig('%s/Plots/FullSolution.pdf'%name, dpi=600, bbox_inches='tight')
+    plt.savefig('%s/Plots/Full_solution_%s.pdf'%(name, name), dpi=600, bbox_inches='tight')
   else:
-    plt.savefig('%s/Plots/FullSolution.png'%name, dpi=600, bbox_inches='tight')
+    plt.savefig('%s/Plots/Full_solution_%s.png'%(name, name), dpi=600, bbox_inches='tight')
 
   plt.show()
 
@@ -1121,7 +1129,7 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
     #######
 
     tresiduals = Table([MJDs, X_save, Xun_save, Y_save, Yun_save], names=['MJD','RA','eRA','DEC','eDEC'])
-    tresiduals.write('%s/Results/Residuals.csv'%name)
+    tresiduals.write('%s/Results/Residuals.csv'%name, overwrite=True)
 
     ax1.set_ylabel(r'$\Delta\alpha$ (arcsec)')
     ax1.minorticks_on()

@@ -63,9 +63,10 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
-  if os.path.isfile('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch)):
-    print('Registration source file for this epoch already exists. Using current file.')
-    C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
+  if overwriteReg != True:
+    if os.path.isfile('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch)):
+      print('Registration source file for this epoch already exists. Using current file.')
+      C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
   else:
 
