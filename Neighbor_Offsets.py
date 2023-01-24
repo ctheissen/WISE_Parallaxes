@@ -72,13 +72,13 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
 
 
-def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False):
+def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False, overwriteReg=False):
 
   print('Getting calibrators within %s arcmin'%radius)
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
-  if os.path.isfile('%s/Results/Calib_Sources.csv'%name):
+  if os.path.isfile('%s/Results/Calib_Sources.csv'%name) and overwriteReg != True:
     print('Calibration source file already exists. Using current file.')
     C = Table.read('%s/Results/Calib_Sources.csv'%name)
 

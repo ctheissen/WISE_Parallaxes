@@ -57,16 +57,15 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
 
 
-def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False):
+def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, writeout=True, w1limit=14, cache=False, overwriteReg=False):
 
   print('Getting registration sources within %s arcmin'%radius)
 
   # First check if the file exits already
   #print(os.path.isfile('Calib_Sources.csv'))
-  if overwriteReg != True:
-    if os.path.isfile('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch)):
-      print('Registration source file for this epoch already exists. Using current file.')
-      C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
+  if os.path.isfile('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch)) and overwriteReg != True:
+    print('Registration source file for this epoch already exists. Using current file.')
+    C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
   else:
 
@@ -163,8 +162,8 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
 
     RADiffs  = np.array(RADiffs)
     DECDiffs = np.array(DECDiffs)
-    step=150
-    bins = range(-300,300+step, step)
+    step     = 150
+    bins     = range(-300,300+step, step)
 
     plt.figure(1001)
     hist = plt.hist2d(RADiffs, DECDiffs, bins=bins, cmap=plt.cm.Greys)

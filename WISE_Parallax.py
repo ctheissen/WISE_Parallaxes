@@ -15,15 +15,19 @@ import matplotlib.gridspec as gridspec
 import matplotlib
 import Neighbor_Offsets as ne
 import Register_Frames as reg
+import Gaia as Gaia
 import warnings
 warnings.simplefilter('ignore')
+from astroquery.vizier import Vizier
+from astropy.coordinates import SkyCoord
+Vizier.ROW_LIMIT = -1
 
 
 # Set a few defaults
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 Irsa.ROW_LIMIT = -1
-#Irsa.TIMEOUT = 60*1 # 10 minutes
+Irsa.TIMEOUT   = 60*60 # 10 minutes
 
 plt.rc('xtick', labelsize=8)
 plt.rc('ytick', labelsize=8)
@@ -39,6 +43,8 @@ d2y  = 1/365.25
 
 
 ###########################################################################################################
+
+
 clickpoints  = []
 clickpoints2 = []
 
@@ -110,9 +116,9 @@ def AstrometryFunc(x, Delta1, Delta2, PMra, PMdec, pi, JPL=True, RA=True, DEC=Tr
 ###########################################################################################################
 
 
-def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, cache=False,
-                    PLOT=True, method='mcmc', savechain=True, JPL=True, Register=False, Calibrate=True, 
-                    AllowUpperLimits=False, sigma=3, removeSingles=False, removeEpochs=[], overwriteReg=False, 
+def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=10, cache=False, gaia=False,
+                    PLOT=True, method='mcmc', savechain=True, JPL=True, register=True, calibrate=True, 
+                    allowUpperLimits=False, sigma=3, removeSingles=False, removeEpochs=[], overwriteReg=False, 
                     **kwargs):
 
 
@@ -131,9 +137,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     method           : keyword to set for fitting method. Currently only 'mcmc' using the emcee is available
     savechain        : keyword to set for saving the final MCMC chain (default = True)
     JPL              : keyword to set to use the JPL ephemeris (default = True)
-    Register         : keyword to set for registering within a single epoch (default = False)
-    Calibrate        : keyword to set for registering each epoch to the first epoch (default = True)
-    AllowUpperLimits : keyword to set for allowing astrometry from upper limit magnitude measurements (default = False) 
+    register         : keyword to set for registering within a single epoch (default = True)
+    calibrate        : keyword to set for calibrating each epoch to the first epoch (default = True)
+    gaia             : keyword to set for calibrating each epoch to Gaia (currently DR3; default = False)
+    allowUpperLimits : keyword to set for allowing astrometry from upper limit magnitude measurements (default = False) 
     sigma            : keyword for the sigma clipping value (default = 3)
     removeSingles    : remove epochs that only have a single frame (observation)
     removeEpochs     : list of epochs to remove from the fit (first epoch starts at 1)
@@ -190,6 +197,89 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   index00   = np.argsort(t0['mjd'])
 
   t = t0[index00]
+
+
+  ########### TEST
+  '''
+  radius = 10
+  v    = Vizier(timeout=100000, columns=['**', '+_r'], vizier_server='vizier.cfa.harvard.edu', catalog='I/350/gaiaedr3')
+  v.ROW_LIMIT = -1
+  c    = SkyCoord(ra0, dec0, unit=('deg','deg'), frame='icrs')
+  results  = v.query_region(c, radius = radius*u.arcmin)
+  #print(results)
+  #print(results[0])
+  print(results[0].colnames)
+  Gaia = results[0][np.where( (results[0]['Gmag']<18) & (results[0]['Plx']<5) & (results[0]['RPlx']>5) )]
+  print(Gaia)
+
+  selcols = "ra,dec,sigra,sigdec,w1mpro,w2mpro,w1sigmpro,w2sigmpro,mjd,qual_frame"
+
+  t1 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
+                         catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcmin,
+                         selcols=selcols)
+  print(t1)
+  print(np.unique(t1['mjd']))
+  #plt.scatter(Gaia['RA_ICRS'], Gaia['DE_ICRS'], label='Gaia', alpha=0.5)
+  for mjd in np.unique(t1['mjd']):
+
+    j = np.where(t1['mjd'] == mjd)
+    plt.scatter(Gaia['RA_ICRS'], Gaia['DE_ICRS'], label='Gaia', alpha=0.5)
+    plt.scatter(t1['ra'][j], t1['dec'][j], label='WISE', alpha=0.5)
+    # Cross match the catalogs within a very small radius
+    max_sep = 1.0 * u.arcsec
+    c = SkyCoord(ra=t1['ra'][j], dec=t1['dec'][j])
+    catalog = SkyCoord(ra=Gaia['RA_ICRS'], dec=Gaia['DE_ICRS'])
+    idx, d2d, d3d = c.match_to_catalog_3d(catalog)
+    sep_constraint = d2d < max_sep
+    c_matches = t1[j][sep_constraint]
+    catalog_matches = Gaia[idx[sep_constraint]]
+    plt.scatter(c_matches['ra'], c_matches['dec'], label='matched', marker='x', alpha=0.5)
+    plt.legend()
+
+    # Warp to new coordinates
+    src = np.array([[a,b] for a,b in zip(c_matches['ra'], c_matches['dec'])])
+    dst = np.array([[a,b] for a,b in zip(catalog_matches['RA_ICRS'], catalog_matches['DE_ICRS'])])
+    from skimage import transform as tf
+    tform1 = tf.estimate_transform('euclidean', src, dst)
+    tform2 = tf.estimate_transform('polynomial', src, dst, 1)
+    #print(tform)
+    #print(tform(src))
+    #print(tform(src)[:,0])
+    newRAs1  = tform1(src)[:,0]
+    newDECs1 = tform1(src)[:,1]
+    newRAs2  = tform2(src)[:,0]
+    newDECs2 = tform2(src)[:,1]
+
+
+    fig2 = plt.figure()
+    ax1 = fig2.add_subplot(121)
+    ax2 = fig2.add_subplot(122)
+    bins = np.linspace(-0.001, 0.001, 30)
+    ax1.hist(c_matches['ra'] - catalog_matches['RA_ICRS'], bins=bins, histtype='step', label='raw', alpha=0.5)
+    ax1.hist(newRAs1 - catalog_matches['RA_ICRS'], bins=bins, histtype='step', label='calibrated (euc)', alpha=0.5)
+    ax1.hist(newRAs2 - catalog_matches['RA_ICRS'], bins=bins, histtype='step', label='calibrated (poly)', alpha=0.5)
+    ax2.hist(c_matches['dec'] - catalog_matches['DE_ICRS'], bins=bins, histtype='step', label='raw', alpha=0.5)
+    ax2.hist(newDECs1 - catalog_matches['DE_ICRS'], bins=bins, histtype='step', label='calibrated (euc)', alpha=0.5)
+    ax2.hist(newDECs2 - catalog_matches['DE_ICRS'], bins=bins, histtype='step', label='calibrated (poly)', alpha=0.5)
+    print(np.std(c_matches['ra'] - catalog_matches['RA_ICRS']), np.std(newRAs1 - catalog_matches['RA_ICRS']), np.std(newRAs1 - catalog_matches['RA_ICRS'])/np.std(c_matches['ra'] - catalog_matches['RA_ICRS']), 'RA euc')
+    print(np.std(c_matches['dec'] - catalog_matches['DE_ICRS']), np.std(newDECs1 - catalog_matches['DE_ICRS']), np.std(newDECs1 - catalog_matches['DE_ICRS'])/np.std(c_matches['dec'] - catalog_matches['DE_ICRS']), 'DEC euc')
+    print(np.std(c_matches['ra'] - catalog_matches['RA_ICRS']), np.std(newRAs2 - catalog_matches['RA_ICRS']), np.std(newRAs2 - catalog_matches['RA_ICRS'])/np.std(c_matches['ra'] - catalog_matches['RA_ICRS']), 'RA poly')
+    print(np.std(c_matches['dec'] - catalog_matches['DE_ICRS']), np.std(newDECs2 - catalog_matches['DE_ICRS']), np.std(newDECs2 - catalog_matches['DE_ICRS'])/np.std(c_matches['dec'] - catalog_matches['DE_ICRS']), 'DEC poly')
+    print()
+    plt.legend()
+
+    plt.show()
+    #sys.exit()
+  #plt.scatter(t1['ra'], t1['dec'], label='WISE', alpha=0.5)
+  plt.legend()
+
+  # loop through the MJDs
+
+  plt.show()
+  sys.exit()
+  '''
+  ########### TEST
+
 
   if JPL: # Use the JPL DE430 ephemeris
       from astropy.coordinates import solar_system_ephemeris
@@ -304,7 +394,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     plt.close('all')
 
     W2min,  W2max  = np.min(list(zip(*clickpoints2))[0]), np.max(list(zip(*clickpoints2))[0])
-    if AllowUpperLimits: # Sometimes useful for very faint sources (Y dwarfs)
+    if allowUpperLimits: # Sometimes useful for very faint sources (Y dwarfs)
       slice2 = np.where( (t['w2mpro'][slice1] >= W2min)  & (t['w2mpro'][slice1] <= W2max) )
     else:
       slice2 = np.where( (t['w2mpro'][slice1] >= W2min)  & (t['w2mpro'][slice1] <= W2max) & (t['w2sigmpro'][slice1].filled(-9999) != -9999) )
@@ -365,7 +455,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     groupcount += 1
 
-    if Register != False: ## Register the epoch
+    if register and gaia:
+      raise Exception('Cannot register to WISE and calibrate to Gaia. Check keyword options.') 
+
+    elif register and gaia == False: ## Register the epoch
 
       # Get the first position of the epoch
       ra00     = t['ra'][slice1][slice2][group][0]
@@ -377,9 +470,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
       # Get the shifts (only need to find the correct search radius for the 1st epoch)
       if groupcount == 1:
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, cache=cache)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, cache=cache, overwriteReg=overwriteReg)
       else: 
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius, cache=cache)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius, cache=cache, overwriteReg=overwriteReg)
 
       # Shift the epoch
       #print(rashifts0)
@@ -406,8 +499,15 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     else: # Don't register each subepoch
 
-      filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, maxiters=None,)
-      filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, maxiters=None)
+      if gaia: # Register each epoch to Gaia
+        newRAarray, newDECarray = Gaia.calibrate(t['mjd'][slice1][slice2][group], t['ra'][slice1][slice2][group], t['dec'][slice1][slice2][group], ra0=ra0, dec0=dec0)
+        
+        filteredRA  = sigma_clip(newRAarray,  sigma=sigma, maxiters=None)
+        filteredDEC = sigma_clip(newDECarray, sigma=sigma, maxiters=None)
+      #### Gaia calibration
+      else:
+        filteredRA  = sigma_clip(t['ra'][slice1][slice2][group],  sigma=sigma, maxiters=None)
+        filteredDEC = sigma_clip(t['dec'][slice1][slice2][group], sigma=sigma, maxiters=None)
 
     index = np.where( (~filteredRA.mask) & (~filteredDEC.mask) )[0]
     print('Epoch %s/%s - Group / Filtered Group: %s/%s'%(groupcount, len(Groups), len(t['ra'][slice1][slice2][group]), len(t['ra'][slice1][slice2][group][index])))
@@ -466,18 +566,18 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     raise Exception('Not enough epochs available. Only %s epochs available'%groupcount) 
 
   # Get the shifts using calibrators (Only use 10 arcsec/arcminutes)
-  if Calibrate == True:
+  if calibrate == True:
     #print('EPOCHS:', Epochs, len(Epochs))
     #print('YS1:', Ys1, len(Ys1))
 
     if radecstr != None:
-      if Register == True:
+      if register == True:
         rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else:
         rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, overwriteReg=overwriteReg, cache=cache)
 
     elif ra0 != None and dec0 != None:
-      if Register == True:
+      if register == True:
         rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else: 
         rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, overwriteReg=overwriteReg, cache=cache)
