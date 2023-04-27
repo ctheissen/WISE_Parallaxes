@@ -588,13 +588,14 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     Ys1     = np.array(Ys1).flatten() - rashifts
     Ys2     = np.array(Ys2).flatten() - decshifts
-    Ys1ALL0 = np.array(Ys1ALL) - rashifts
-    Ys2ALL0 = np.array(Ys2ALL) - decshifts
+    Ys1ALL0 = np.array(Ys1ALL, dtype=object) - rashifts
+    Ys2ALL0 = np.array(Ys2ALL, dtype=object) - decshifts
   else:
     Ys1     = np.array(Ys1).flatten()
     Ys2     = np.array(Ys2).flatten()
-    Ys1ALL0 = np.array(Ys1ALL)
-    Ys2ALL0 = np.array(Ys2ALL)
+    #print(Ys1ALL)
+    Ys1ALL0 = np.array(Ys1ALL, dtype=object)
+    Ys2ALL0 = np.array(Ys2ALL, dtype=object)
 
   MJDs  = np.array(MJDs).flatten()
   unYs1 = np.array(unYs1).flatten()
@@ -602,7 +603,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   #unYs1 = np.sqrt( np.array(unYs1).flatten()**2 + (5./d2ma)**2 )
   #unYs2 = np.sqrt( np.array(unYs2).flatten()**2 + (5./d2ma)**2 )
 
-  XsALL0  = np.array(XsALL)
+  XsALL0  = np.array(XsALL, dtype=object)
 
   # Need to reshape the arrays. Not the most efficient thing.
   XsALL  = np.empty(0)
