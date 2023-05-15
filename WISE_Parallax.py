@@ -973,7 +973,8 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 ###########################################################################################################
 
 
-def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResidual=True):
+def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResidual=True, title=True, 
+                 saveParallax=False):
 
   # Get the name for the filepaths
   name = Name.replace('$','').replace(' ','').replace('.','')
@@ -1176,7 +1177,7 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
   ax22.set_xlabel(r'MJD (day)')
   ax2.minorticks_on()
 
-  plt.suptitle('%s'%Name)
+  if title: plt.suptitle('%s'%Name)
 
   fig.subplots_adjust(wspace=0.05, hspace=0.1)
 
@@ -1187,6 +1188,26 @@ def PlotParallax(Name, Place, offset, offset1, offset2, PDFsave=False, plotResid
 
   plt.show()
 
+
+  ################################################## save the solution if keyword set
+
+  if saveParallax:
+
+    #Xs2  = np.linspace(np.min(MJDs)-2000, np.max(MJDs)+2000, int(1e6))
+    Xs2  = np.arange(np.around(np.min(MJDs)-2000), np.around(np.max(MJDs)+2001), 1)
+    RAs  = np.zeros(len(Xs2)) + Ys1[0]*d2a
+    DECs = np.zeros(len(Xs2)) + Ys2[0]*d2a
+
+    RA, DEC = True, False
+    RAplot  = AstrometryFunc([RAs, DECs, Xs2], *poptEMCEE, RA=RA, DEC=DEC)
+    RA, DEC = False, True
+    DECplot = AstrometryFunc([RAs, DECs, Xs2], *poptEMCEE, RA=RA, DEC=DEC)
+
+    twriteSol = Table([Xs2, RAplot, DECplot,
+                       RAplot  - poptEMCEE[-3]*(Xs2-Xs2[0])*d2y - poptEMCEE[0], 
+                       DECplot - poptEMCEE[-2]*(Xs2-Xs2[0])*d2y - poptEMCEE[1]
+                      ], names=['MJD','RA','DEC','RAres','DECres'])
+    twriteSol.write('%s/Results/Solution.csv'%name, overwrite=True)
 
   ################################################## Plot residuals without astrometry
 
