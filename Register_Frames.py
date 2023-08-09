@@ -122,7 +122,7 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     Twrite.write('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch), overwrite=True)
     C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
-    print('Done')
+    print('Done\n')
 
 
   RA_SHIFTS  = []

@@ -142,7 +142,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     Twrite.write('%s/Results/Calib_Sources.csv'%name, overwrite=True)
     C = Table.read('%s/Results/Calib_Sources.csv'%name)
 
-    print('Done')
+    print('Done\n')
 
   # Find Date demarcation points
   GroupDates = []

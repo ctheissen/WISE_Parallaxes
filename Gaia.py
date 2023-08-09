@@ -6,8 +6,10 @@ from astropy import units as u
 import astropy.coordinates as coords
 from astropy.stats import sigma_clip
 from astroquery.ipac.irsa import Irsa
+import warnings
+warnings.simplefilter('ignore')
 Irsa.ROW_LIMIT = -1
-#Irsa.TIMEOUT = 60*10 # 10 minutes
+Irsa.TIMEOUT = 60*10 # 10 minutes
 from astroquery.vizier import Vizier
 from astropy.coordinates import SkyCoord
 Vizier.ROW_LIMIT = -1
@@ -18,7 +20,7 @@ d2y  = 1/365.25
 
 ##################
 
-def calibrate(MJDs, RAs, DECs, radecstr=None, ra0=None, dec0=None, radius=15, cache=True):
+def calibrate(MJDs, RAs, DECs, radecstr=None, ra0=None, dec0=None, radius=10, cache=True):
 
   #### Gaia calibration
 
