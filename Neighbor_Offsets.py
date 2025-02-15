@@ -21,17 +21,17 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
   
   t1 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                          catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                         selcols=selcols)
+                         columns=selcols)
   t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                          catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                         selcols=selcols)
+                         columns=selcols)
   if len(t2) == 0:
     t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
   t3 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                         selcols=selcols)
+                         columns=selcols)
 
   t00  = vstack([t1[np.where(t1['qual_frame']!=0)], t2[np.where(t2['qual_frame']!=0)]], join_type='inner')
   t0   = vstack([t00, t3[np.where(t3['qual_frame']!=0)]], join_type='inner')
@@ -90,13 +90,21 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
       if radecstr != None:
         T = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache,
+                              columns="ra,dec,w1mpro,w1snr,w1sat,w2sat,cc_flags,ext_flg")
 
       elif ra0 != None and dec0 != None:
         T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache,
+                              columns="ra,dec,w1mpro,w1snr,w1sat,w2sat,cc_flags,ext_flg")
 
       print('Number of Potential Calibration Sources: %s'%len(T))
+
+      # Calculate the dist of each source from the target in arcseconds
+      source1  = coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs')
+      sources1 = coords.SkyCoord(T['ra'], T['dec'], unit=(u.deg,u.deg), frame='icrs')
+      dist = source1.separation(sources1)
+      T['dist'] = dist.arcsecond
       
       # Just get the first two cc flags (W1 and W2)
       ccFlg1 = np.array([e[0] for e in T['cc_flags'].data])
@@ -142,7 +150,7 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
     Twrite.write('%s/Results/Calib_Sources.csv'%name, overwrite=True)
     C = Table.read('%s/Results/Calib_Sources.csv'%name)
 
-    print('Done\n')
+    print('\nDone\n')
 
   # Find Date demarcation points
   GroupDates = []
@@ -195,8 +203,8 @@ def GetCalibrators(name, Epochs, radecstr=None, ra0=None, dec0=None, radius=10, 
 
     RADiffs  = np.array(RADiffs)
     DECDiffs = np.array(DECDiffs)
-    step=100
-    bins = range(-500,500+step, step)
+    step     = 100
+    bins     = range(-500,500+step, step)
 
     plt.figure(1001)
     hist = plt.hist2d(RADiffs, DECDiffs, bins=bins, cmap=plt.cm.Greys, range=((-500,500),(-500,500)))

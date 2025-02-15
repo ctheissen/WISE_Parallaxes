@@ -68,7 +68,7 @@ def onclick2(event):
 
   global clickpoints2
   clickpoints2.append([event.xdata, event.ydata])
-  plt.axvline(event.xdata, c='r', ls=':') 
+  plt.axvline(event.xdata, c='b', ls=':') 
   plt.draw()
   if len(clickpoints2) == 2:
     print('Closing figure')
@@ -148,10 +148,18 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   # Make directories for the plots and results
   name = Name.replace('$','').replace(' ','').replace('.','')
-  if not os.path.exists('%s/Plots'%name):
-    os.makedirs('%s/Plots'%name)
-  if not os.path.exists('%s/Results'%name):
-    os.makedirs('%s/Results'%name)
+  # Create Directory Structure
+  directory = name
+  if gaia: 
+      directory += '_Gaia'
+  if register: 
+      directory += '_Reg'
+  if calibrate: 
+      directory += '_Cal'
+  if not os.path.exists('%s/Plots'%directory):
+    os.makedirs('%s/Plots'%directory)
+  if not os.path.exists('%s/Results'%directory):
+    os.makedirs('%s/Results'%directory)
 
   # Get the object
 
@@ -161,33 +169,33 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     t1 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
     t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
                              catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                             selcols=selcols)
+                             columns=selcols)
     t3 = Irsa.query_region(coords.SkyCoord(radecstr, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
 
   elif ra0 != None and dec0 != None:
 
     t1 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
     t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
     if len(t2) == 0:
       t2 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                              catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                             selcols=selcols)
+                             columns=selcols)
     t3 = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
                            catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                           selcols=selcols)
+                           columns=selcols)
   else:
     raise ValueError("Need to supply either radecstr or ra0 and dec0") # Need some coords
 
@@ -342,10 +350,10 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
     ax1.scatter(t['mjd'], t['ra']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 80, 2): 
+    for j in np.arange(-1, 70, 2): 
       ax1.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
     ax2.scatter(t['mjd'], t['dec']*d2a, c='r', alpha=0.5)
-    for j in np.arange(-1, 80, 2): 
+    for j in np.arange(-1, 70, 2): 
       ax2.axvline(np.min(t['mjd']) + 365.25/4*j , c='k', ls='--')
 
     fig3, ax3 = plt.subplots()
@@ -470,9 +478,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
       # Get the shifts (only need to find the correct search radius for the 1st epoch)
       if groupcount == 1:
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, cache=cache, overwriteReg=overwriteReg)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(directory, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, cache=cache, overwriteReg=overwriteReg)
       else: 
-        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(name, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius, cache=cache, overwriteReg=overwriteReg)
+        rashifts0, decshifts0, RegisterRadius = reg.GetRegistrators(directory, epochs00, subepoch=groupcount, ra0=ra00, dec0=dec00, radius=RegisterRadius, cache=cache, overwriteReg=overwriteReg)
 
       # Shift the epoch
       #print(rashifts0)
@@ -555,9 +563,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
     ax3.set_xlim(xmax, xmin)
     ax3.set_ylabel('Dec. (arcsec)')
     
-    fig0.savefig('%s/Plots/MJDs0.png'%name, dpi=600, bbox_inches='tight')
-    fig.savefig('%s/Plots/MJDs1.png'%name, dpi=600, bbox_inches='tight')
-    fig2.savefig('%s/Plots/MJDs2.png'%name, dpi=600, bbox_inches='tight')
+    fig0.savefig('%s/Plots/MJDs0.png'%directory, dpi=600, bbox_inches='tight')
+    fig.savefig('%s/Plots/MJDs1.png'%directory, dpi=600, bbox_inches='tight')
+    fig2.savefig('%s/Plots/MJDs2.png'%directory, dpi=600, bbox_inches='tight')
     plt.show()
     plt.close('all')
 
@@ -572,15 +580,15 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
     if radecstr != None:
       if register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(directory, Epochs, radecstr=radecstr, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, radecstr=radecstr, overwriteReg=overwriteReg, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(directory, Epochs, radecstr=radecstr, overwriteReg=overwriteReg, cache=cache)
 
     elif ra0 != None and dec0 != None:
       if register == True:
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(directory, Epochs, ra0=ra0, dec0=dec0, radius=RegisterRadius, overwriteReg=overwriteReg, cache=cache)
       else: 
-        rashifts, decshifts = ne.GetCalibrators(name, Epochs, ra0=ra0, dec0=dec0, overwriteReg=overwriteReg, cache=cache)
+        rashifts, decshifts = ne.GetCalibrators(directory, Epochs, ra0=ra0, dec0=dec0, overwriteReg=overwriteReg, cache=cache)
 
     #print('Shifts (mas):')
     #print('RA:', rashifts*d2ma, len(rashifts))
@@ -618,9 +626,9 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   Ys2ALL = np.array(Ys2ALL).flatten() 
 
   Twrite1 = Table([Ys1, unYs1, Ys2, unYs2, MJDs], names=['RA','SIGRA','DEC','SIGDEC','MJD'])
-  Twrite1.write('%s/Results/Weighted_Epochs.csv'%name, overwrite=True)
+  Twrite1.write('%s/Results/Weighted_Epochs.csv'%directory, overwrite=True)
   Twrite2 = Table([Ys1ALL, Ys2ALL, XsALL], names=['RA','DEC','MJD'])
-  Twrite2.write('%s/Results/All_Epochs.csv'%name, overwrite=True)
+  Twrite2.write('%s/Results/All_Epochs.csv'%directory, overwrite=True)
 
   print('Epochs:', groupcount)
   print('Positions (RA):', Ys1)
@@ -765,7 +773,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
 
   # Save the chain?
   if savechain:
-    np.save('%s/Results/MCMCresults.npy'%name, samples)
+    np.save('%s/Results/MCMCresults.npy'%directory, samples)
 
   a_mcmc, b_mcmc, c_mcmc, d_mcmc, e_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
                                                list(zip(*np.percentile(samples, [16, 50, 84],
@@ -879,7 +887,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   ax.set_ylabel(r'Motion + offset (arcsec)')
   ax.set_xlabel(r'MJD (day)')
   plt.minorticks_on()
-  plt.savefig('%s/Plots/Pi_radec_solution.png'%name, dpi=600, bbox_inches='tight')
+  plt.savefig('%s/Plots/Pi_radec_solution.png'%directory, dpi=600, bbox_inches='tight')
   plt.show()
   plt.close('all')
 
@@ -899,7 +907,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   plt.xlabel(r'$\Delta \alpha \cos \delta$ (arcsec)')
   plt.ylabel(r'$\Delta \delta$ (arcsec)')
   plt.minorticks_on()
-  plt.savefig('%s/Plots/Pi_all_solution.png'%name, dpi=600, bbox_inches='tight')
+  plt.savefig('%s/Plots/Pi_all_solution.png'%directory, dpi=600, bbox_inches='tight')
   plt.show()
   plt.close('all')
 
@@ -938,7 +946,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   ax2.set_ylabel(r'$\Delta$Dec (arcsec)')
   ax2.set_xlabel(r'MJD (day)')
 
-  plt.savefig('%s/Plots/Pi_RA_DEC_solution.png'%name, dpi=600, bbox_inches='tight')
+  plt.savefig('%s/Plots/Pi_RA_DEC_solution.png'%directory, dpi=600, bbox_inches='tight')
 
   plt.show()
   plt.close('all')
@@ -959,7 +967,7 @@ def MeasureParallax(Name='JohnDoe', radecstr=None, ra0=None, dec0=None, radius=1
   ax1.set_xlabel(r'$\Delta$RA (arcsec)')
   ax1.set_ylabel(r'$\Delta$Dec (arcsec)')
 
-  plt.savefig('%s/Plots/Pi_circle_solution.png'%name, dpi=600, bbox_inches='tight')
+  plt.savefig('%s/Plots/Pi_circle_solution.png'%directory, dpi=600, bbox_inches='tight')
 
   plt.show()
   plt.close('all')
