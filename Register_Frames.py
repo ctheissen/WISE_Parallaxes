@@ -20,17 +20,17 @@ def GetPositionsAndEpochs(ra, dec, Epochs, radius=6, cache=False):
 
   t1 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                         catalog="allsky_4band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                        selcols=selcols)
+                        columns=selcols)
   t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                          catalog="allsky_3band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                         selcols=selcols)
+                         columns=selcols)
   if len(t2) == 0:
     t2 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                           catalog="allsky_2band_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                          selcols=selcols)
+                          columns=selcols)
   t3 = Irsa.query_region(coords.SkyCoord(ra, dec, unit=(u.deg,u.deg), frame='icrs'), 
                          catalog="neowiser_p1bs_psd", spatial="Cone", radius=radius * u.arcsec, cache=cache,
-                         selcols=selcols)
+                         columns=selcols)
 
   t00  = vstack([t1[np.where(t1['qual_frame']!=0)], t2[np.where(t2['qual_frame']!=0)]], join_type='inner')
   t0   = vstack([t00, t3[np.where(t3['qual_frame']!=0)]], join_type='inner')
@@ -74,9 +74,16 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     while EnoughRegistrators:
 
       T = Irsa.query_region(coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs'), 
-                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache)
+                              catalog="allwise_p3as_psd", spatial="Cone", radius=radius * u.arcmin, cache=cache, 
+                              columns="ra,dec,w1mpro,w1snr,w1sat,w2sat,cc_flags,ext_flg")
 
       print('Number of Potential Registration Sources: %s'%len(T))
+
+      # Calculate the dist of each source from the target in arcseconds
+      source1  = coords.SkyCoord(ra0, dec0, unit=(u.deg,u.deg), frame='icrs')
+      sources1 = coords.SkyCoord(T['ra'], T['dec'], unit=(u.deg,u.deg), frame='icrs')
+      dist = source1.separation(sources1)
+      T['dist'] = dist.arcsecond
 
       # Just get the first two cc flags (W1 and W2)
       ccFlg1 = np.array([e[0] for e in T['cc_flags'].data])
@@ -101,6 +108,7 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     ## Check how many epochs the source is found in
     # Create the file for the first time
     sourcecount = 0
+
     for source, ra, dec, dist in zip(range(len(Tnew)), Tnew['ra'], Tnew['dec'], Tnew['dist']):
       
       print('Getting source: %s / %s'%(source+1, len(Tnew)), end='\r')#,MJDs)
@@ -122,7 +130,7 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     Twrite.write('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch), overwrite=True)
     C = Table.read('%s/Results/Registration_Sources_Epoch%s.csv'%(name, subepoch))
 
-    print('Done')
+    print('\nDone\n')
 
 
   RA_SHIFTS  = []
@@ -192,7 +200,3 @@ def GetRegistrators(name, Epochs, subepoch=0, ra0=None, dec0=None, radius=10, wr
     np.savetxt('%s/Results/dec_shifts_epoch%s.txt'%(name, subepoch), np.array(DEC_SHIFTS)/d2ma)
 
   return np.array(RA_SHIFTS)/d2ma, np.array(DEC_SHIFTS)/d2ma, radius
-
-
-
- 
