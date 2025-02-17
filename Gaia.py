@@ -84,7 +84,7 @@ def calibrate(MJDs, RAs, DECs, radecstr=None, ra0=None, dec0=None, radius=10, ca
     j               = np.where(tWG['mjd'] == mjd)[0]
     if len(j) < 10: continue # This mjd has few or no observations
 
-    max_sep         = 3.0 * u.arcsec # Cross match the catalogs within a small radius
+    max_sep         = 1.0 * u.arcsec # Cross match the catalogs within a small radius
     
     c               = SkyCoord(ra=tWG['ra'][j], dec=tWG['dec'][j])
     catalog         = SkyCoord(ra=GaiaT['ra'], dec=GaiaT['dec'])
